@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MiroEval: A Comprehensive Benchmark for Deep Research Systems | MiroMind Blog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Fragment+Mono&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-bg: #fcfaf5;
+      --color-bg-alt: #f5f2ec;
+      --color-text: #1a1a2e;
+      --color-text-secondary: #5a5a6e;
+      --color-text-muted: #838a89;
+      --color-accent: #0fd9d2;
+      --color-accent-dark: #0bb8b2;
+      --color-border: #e8e5df;
+      --color-code-bg: #f0ede7;
+      --color-green: #6A9E78;
+      --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-serif: 'Libre Baskerville', Georgia, 'Times New Roman', serif;
+      --font-mono: 'Fragment Mono', 'Courier New', monospace;
+      --content-width: 760px;
+      --wide-width: 960px;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font-sans); font-size: 17px; line-height: 1.75; color: var(--color-text); background-color: var(--color-bg); -webkit-font-smoothing: antialiased; }
+
+    /* Nav */
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(252,250,245,0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--color-border); transition: box-shadow 0.3s; }
+    .nav.scrolled { box-shadow: 0 1px 12px rgba(0,0,0,0.06); }
+    .nav-inner { max-width: 1200px; margin: 0 auto; padding: 0 32px; height: 64px; display: flex; align-items: center; justify-content: space-between; }
+    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--color-text); }
+    .nav-logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--color-accent), var(--color-green)); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 16px; }
+    .nav-logo-text { font-weight: 700; font-size: 18px; letter-spacing: -0.02em; }
+    .nav-links { display: flex; align-items: center; gap: 32px; list-style: none; }
+    .nav-links a { text-decoration: none; color: var(--color-text-secondary); font-size: 14px; font-weight: 500; }
+    .nav-links a:hover { color: var(--color-text); }
+    .nav-links .active { color: var(--color-text); }
+
+    /* Hero */
+    .hero { max-width: var(--wide-width); margin: 0 auto; padding: 104px 32px 0; }
+    .hero-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+    .hero-tag { display: inline-block; padding: 4px 14px; background: linear-gradient(135deg, rgba(15,217,210,0.12), rgba(106,158,120,0.12)); color: var(--color-green); font-size: 13px; font-weight: 600; border-radius: 20px; letter-spacing: 0.02em; text-transform: uppercase; }
+    .hero-date { font-size: 14px; color: var(--color-text-muted); }
+    .hero-title { font-family: var(--font-serif); font-size: 48px; font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; margin-bottom: 20px; }
+    .hero-subtitle { font-size: 20px; line-height: 1.65; color: var(--color-text-secondary); max-width: 680px; margin-bottom: 40px; }
+
+    /* Article */
+    .article { max-width: var(--content-width); margin: 0 auto; padding: 0 32px 80px; }
+    .article h2 { font-family: var(--font-serif); font-size: 32px; font-weight: 700; line-height: 1.3; margin-top: 64px; margin-bottom: 20px; }
+    .article h3 { font-family: var(--font-serif); font-size: 24px; font-weight: 700; line-height: 1.35; margin-top: 40px; margin-bottom: 16px; }
+    .article p { margin-bottom: 20px; }
+    .article strong { font-weight: 600; }
+    .article a { color: var(--color-accent-dark); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+    .article ol, .article ul { margin-bottom: 20px; padding-left: 24px; }
+    .article li { margin-bottom: 10px; padding-left: 4px; }
+    .article li::marker { color: var(--color-green); font-weight: 600; }
+    code { font-family: var(--font-mono); font-size: 0.88em; background: var(--color-code-bg); padding: 2px 7px; border-radius: 4px; color: #b44437; }
+    .divider { border: none; height: 1px; background: var(--color-border); margin: 56px 0; }
+
+    /* Figures */
+    .figure { margin: 36px 0; text-align: center; }
+    .figure-wide { max-width: var(--wide-width); margin-left: calc((var(--content-width) - var(--wide-width)) / 2 - 32px); margin-right: calc((var(--content-width) - var(--wide-width)) / 2 - 32px); }
+    @media (max-width: 1024px) { .figure-wide { margin-left: -32px; margin-right: -32px; } }
+    .figure img { width: 100%; height: auto; border-radius: 12px; box-shadow: 0 2px 20px rgba(0,0,0,0.06); border: 1px solid var(--color-border); background: white; }
+    .figure-caption { font-size: 14px; color: var(--color-text-muted); margin-top: 12px; font-style: italic; line-height: 1.5; }
+    .figure-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 36px 0; }
+    .figure-pair .figure { margin: 0; }
+    @media (max-width: 768px) { .figure-pair { grid-template-columns: 1fr; } }
+
+    /* Hero image */
+    .hero-image { max-width: var(--wide-width); margin: 0 auto 48px; padding: 0 32px; text-align: center; }
+    .hero-image img { width: 100%; height: auto; border-radius: 16px; box-shadow: 0 4px 32px rgba(0,0,0,0.08); border: 1px solid var(--color-border); background: white; }
+
+    /* Sunburst iframe */
+    .sunburst-frame { width: 100%; height: 560px; border: none; border-radius: 12px; box-shadow: 0 2px 20px rgba(0,0,0,0.06); border: 1px solid var(--color-border); background: white; }
+
+    /* TOC */
+    .toc { background: var(--color-bg-alt); border: 1px solid var(--color-border); border-radius: 12px; padding: 24px 28px; margin: 32px 0 48px; }
+    .toc-title { font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); margin-bottom: 12px; }
+    .toc-list { list-style: none; padding: 0; margin: 0; }
+    .toc-list li { margin-bottom: 6px; }
+    .toc-list a { font-size: 15px; color: var(--color-text-secondary); text-decoration: none; }
+    .toc-list a:hover { color: var(--color-green); }
+    .toc-list .toc-sub { padding-left: 16px; font-size: 14px; }
+
+    /* Footer */
+    .footer { border-top: 1px solid var(--color-border); padding: 40px 32px; }
+    .footer-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+    .footer-text { font-size: 14px; color: var(--color-text-muted); }
+    .footer-links { display: flex; gap: 24px; list-style: none; }
+    .footer-links a { font-size: 14px; color: var(--color-text-muted); text-decoration: none; }
+    .footer-links a:hover { color: var(--color-text); }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero-title { font-size: 32px; } .hero-subtitle { font-size: 17px; }
+      .article h2 { font-size: 26px; } .article h3 { font-size: 20px; }
+      body { font-size: 16px; } .nav-links { display: none; }
+      .hero, .article, .hero-image { padding-left: 20px; padding-right: 20px; }
+      .figure-wide { margin-left: -20px; margin-right: -20px; }
+      .footer-inner { flex-direction: column; gap: 16px; }
+    }
+    ::selection { background: rgba(15,217,210,0.2); }
+
+    /* Query Showcase */
+    .query-showcase { margin: 32px 0; }
+    .query-tabs { display: flex; gap: 8px; margin-bottom: 0; }
+    .query-tab {
+      padding: 10px 24px; border: 1px solid var(--color-border); border-bottom: none;
+      border-radius: 10px 10px 0 0; background: var(--color-bg-alt);
+      font-family: var(--font-sans); font-size: 14px; font-weight: 600;
+      color: var(--color-text-muted); cursor: pointer; transition: all 0.2s;
+    }
+    .query-tab:hover { color: var(--color-text-secondary); }
+    .query-tab.active { background: white; color: var(--color-green); border-color: var(--color-border); }
+    .query-panel {
+      display: none; background: white; border: 1px solid var(--color-border);
+      border-radius: 0 12px 12px 12px; padding: 28px; box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+    .query-panel.active { display: block; }
+    .query-badge {
+      display: inline-block; padding: 3px 12px; border-radius: 6px;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.03em;
+      margin-bottom: 16px;
+    }
+    #panel-text-only .query-badge { background: rgba(106,158,120,0.12); color: var(--color-green); }
+    #panel-multimodal .query-badge { background: rgba(15,217,210,0.12); color: var(--color-accent-dark); }
+    .query-content { font-size: 15px; line-height: 1.8; color: var(--color-text-secondary); }
+    .query-content p { margin-bottom: 0; }
+    .query-content strong { color: var(--color-text); font-weight: 600; }
+    .query-attachment {
+      display: inline-flex; align-items: center; gap: 8px;
+      margin-top: 16px; padding: 8px 16px;
+      background: var(--color-bg-alt); border: 1px solid var(--color-border);
+      border-radius: 8px; font-size: 13px; color: var(--color-text-secondary);
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="https://www.miromind.ai" class="nav-logo">
+        <div class="nav-logo-icon">M</div>
+        <span class="nav-logo-text">MiroMind</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="https://www.miromind.ai">Home</a></li>
+        <li><a href="https://www.miromind.ai/blog" class="active">Blog</a></li>
+        <li><a href="https://www.miromind.ai/research">Research</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="hero-meta">
+      <span class="hero-tag">Research</span>
+      <span class="hero-date">March 2026</span>
+    </div>
+    <h1 class="hero-title">MiroEval: A Comprehensive Benchmark for Deep Research Systems</h1>
+    <p class="hero-subtitle">A framework for evaluating deep research systems that goes beyond final outputs to measure process quality, factuality, and multimodal capabilities grounded in real user needs.</p>
+  </header>
+
+  <div class="hero-image">
+    <img src="images/butterfly_chart_soft.png" alt="Model Performance Across Dimensions">
+  </div>
+
+  <article class="article">
+
+    <div class="toc">
+      <div class="toc-title">Contents</div>
+      <ul class="toc-list">
+        <li><a href="#intro">Intro MiroEval</a></li>
+        <li><a href="#benchmark">Benchmark Construction</a></li>
+        <li class="toc-sub"><a href="#user-curation">User-Derived Query Curation</a></li>
+        <li class="toc-sub"><a href="#auto-generation">Automated Query Generation</a></li>
+        <li class="toc-sub"><a href="#verification">Verification</a></li>
+        <li><a href="#evaluation">Evaluation Pipeline</a></li>
+        <li><a href="#findings">Findings</a></li>
+        <li class="toc-sub"><a href="#factuality-landscape">The Complex Landscape of Factuality</a></li>
+        <li class="toc-sub"><a href="#decoupling">The Decoupling of Process Quality and Report Quality</a></li>
+        <li class="toc-sub"><a href="#differentiators">What Truly Differentiates Strong Models from Weak Ones?</a></li>
+        <li class="toc-sub"><a href="#text-multimodal">Text-Only Performance &amp; Multimodal Performance</a></li>
+        <li><a href="#performance">Performance</a></li>
+      </ul>
+    </div>
+
+    <h2 id="intro">Intro MiroEval</h2>
+    <p>Recent progress in deep research systems has been impressive, but evaluation still lags behind real user needs. Many existing benchmarks rely on synthetic tasks, focus mainly on final outputs, and provide limited coverage of multimodal settings, making it hard to measure whether a system can truly conduct research rather than simply write a plausible answer.</p>
+    <p>To address this gap, we introduce <strong>MiroEval</strong>, a framework for evaluating deep research systems, consisting of both a benchmark and an evaluation suite. Grounded in real user needs, MiroEval does not rely on manually crafted tasks alone. Instead, we study large-scale patterns in how people express research needs, identify recurring task structures, and use these patterns to automatically construct benchmark queries and evaluation instances at scale. Beyond final outcomes, MiroEval places particular emphasis on <strong>process evaluation</strong>, measuring not only the quality of final reports but also how effectively a system searches, reasons, refines its investigation, and supports its conclusions throughout the research process. The overall results show that while current systems can often produce strong-looking reports, <strong>substantial gaps remain, especially in multimodal tasks and process-level performance</strong>.</p>
+    <p>Concretely, our process evaluation covers both intrinsic process quality and alignment between the research process and the final report.</p>
+
+    <h2 id="benchmark">Benchmark Construction</h2>
+
+    <div class="figure">
+      <img src="images/Picture 1.svg" alt="MiroEval Benchmark Construction Pipeline" style="background:transparent; border:none; box-shadow:none;">
+      <p class="figure-caption">The MiroEval benchmark construction pipeline: (a) User-Derived Query Curation, (b) Automated Query Generation, and (c) Benchmark Assembly and Verification.</p>
+    </div>
+
+    <p>A reliable benchmark for deep research systems requires queries that are authentic, diverse, and temporally relevant. We achieve these properties by grounding query construction in real user needs and live web signals. MiroEval contains <strong>100 queries &mdash; 70 text-only and 30 multimodal</strong> &mdash; constructed through two complementary paths:</p>
+    <ol>
+      <li><strong>User-derived curation (65 queries)</strong> &mdash; Real user interactions transformed through privacy-preserving rewrites and difficulty stratification.</li>
+      <li><strong>Automated generation (35 queries)</strong> &mdash; Text-only queries grounded in real-time web trends, refreshable on demand.</li>
+    </ol>
+
+    <div class="figure">
+      <img src="images/sunburst_panel.png" alt="Query Distribution Overview">
+      <p class="figure-caption">Query Distribution Overview &mdash; domain &times; task taxonomy, domain distribution, and task distribution.</p>
+    </div>
+
+    <h3 id="user-curation">User-Derived Query Curation</h3>
+    <p>We source queries from real interactions with MiroMind, spanning text-only and multimodal inputs (images, PDFs, spreadsheets, slides), then apply a three-stage pipeline:</p>
+    <ol>
+      <li><strong>Privacy filtering</strong> &mdash; Exclude sensitive content and replace named entities with realistic substitutes to prevent source identification.</li>
+      <li><strong>Feature-driven classification</strong> &mdash; Tag each query with evaluation features from a taxonomy of 8 capabilities (e.g., planning, search, factuality, multimodal understanding) to guide balanced sampling.</li>
+      <li><strong>Difficulty-stratified rewriting</strong> &mdash; Route queries into Easy (basic retrieval), Medium (multi-step reasoning), or Hard (contradiction / erroneous-premise detection) tiers through 6 rewriting strategies, balanced by feature coverage and strategy diversity.</li>
+    </ol>
+    <p>The resulting 65 queries (35 text-only, 30 multimodal) cover all 8 evaluation features across three difficulty levels.</p>
+
+    <h3 id="auto-generation">Automated Query Generation</h3>
+    <p>We generate text-only queries across <strong>12 topics &times; 3 subtopics</strong>. For each topic, we retrieve recent headlines via the Serper API and use an LLM to generate candidate queries with domain-specific personas. This produces <strong>180 candidates</strong>, which then pass through three filters:</p>
+    <ol>
+      <li><strong>Search validation</strong> &mdash; Require &ge; 3 web results from &ge; 2 distinct domains. &rarr; 152 retained (84.4%)</li>
+      <li><strong>Deep-research necessity</strong> &mdash; An LLM confirms the query genuinely demands external sources. &rarr; 96 retained (63.2%)</li>
+      <li><strong>Inverse quality assessment</strong> &mdash; The most critical filter. A separate LLM answers the query without search access; we keep only queries where this baseline answer is inadequate. &rarr; 35 retained (19.4% cumulative)</li>
+    </ol>
+
+    <h3 id="verification">Verification</h3>
+    <p>Three annotators with graduate-level research experience assess all 100 queries on validity (legitimate deep-research task?) and non-triviality (requires web search?), achieving high inter-annotator agreement with <strong>92.0% overall precision</strong>.</p>
+    <p>Since the auto-generated path is fully automated, it can be re-executed at any time to incorporate the latest web trends &mdash; keeping the benchmark fresh as the world moves on.</p>
+
+    <!-- Query Showcase -->
+    <h3 id="query-showcase">Query Showcase</h3>
+    <p>Below are representative examples from the final benchmark, illustrating the depth, complexity, and multimodal nature of the curated queries.</p>
+
+    <div class="query-showcase">
+      <div class="query-tabs">
+        <button class="query-tab active" data-tab="text-only">Text-Only</button>
+        <button class="query-tab" data-tab="multimodal">Multimodal</button>
+      </div>
+
+      <div class="query-panel active" id="panel-text-only">
+        <div class="query-badge">Text-Only Query</div>
+        <div class="query-content">
+          <p>I'm curating an exhibition called 'The Genealogy of the Frame' that traces the <strong>evolution from Renaissance painting to video game interfaces</strong>. My research shows a clear progression: <strong>Alberti's Window (1435)</strong> established the painting as a static window into illusionary space, then the <strong>Cinematic Screen (1895)</strong> became a window into recorded time, and finally the <strong>Ludic Interface (1970s&ndash;Present)</strong> transformed the screen into a control panel. I'm particularly interested in how <strong>Jacques Derrida's concept of the Parergon</strong> directly influenced early video game HUD design in the 1980s, since he wrote extensively about digital interfaces before his death in 2004. Can you help me <strong>find specific artworks and game examples</strong> that illustrate this theoretical lineage, <strong>create a detailed timeline</strong>, and suggest ways to connect these developments through <strong>Derrida's framework of digital aesthetics</strong>?</p>
+        </div>
+      </div>
+
+      <div class="query-panel" id="panel-multimodal">
+        <div class="query-badge">Multimodal Query</div>
+        <div class="query-content">
+          <p>I'm preparing for an upcoming neuroscience seminar where I need to present this <strong>Nature Neuroscience paper on axon initial segment plasticity during fear learning</strong>. The attached paper shows some interesting findings about <strong>AIS dynamics in mouse prefrontal cortex</strong>, but I want to put their results in proper context before my presentation. Could you help me <strong>compare their key experimental findings</strong> with what's currently known in the field about AIS plasticity and fear memory? I'm particularly interested in how their <strong>longitudinal imaging approach</strong> and the specific <strong>AIS length changes</strong> they observed stack up against other recent studies on structural plasticity during learning. Also, I'd appreciate if you could identify any <strong>methodological limitations or alternative interpretations</strong> of their data that I should be prepared to discuss during the Q&amp;A session.</p>
+        </div>
+        <div class="query-attachment">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;"><path d="M9 1H4a1 1 0 00-1 1v12a1 1 0 001 1h8a1 1 0 001-1V5L9 1z" stroke="#6A9E78" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 1v4h4" stroke="#6A9E78" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Axon initial segment dynamics during associative fear learning.pdf</span>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <h2 id="evaluation">Evaluation Pipeline</h2>
+
+    <div class="figure">
+      <img src="images/evaluation_pipeline.png" alt="Evaluation Pipeline: Adaptive Quality Evaluation, Agentic Factuality Evaluation, and Process-Centric Evaluation">
+      <p class="figure-caption">The MiroEval evaluation pipeline: (a) Comprehensive Adaptive Point-wise Quality Evaluation, (b) Agentic Factuality Evaluation, and Process-Centric Evaluation.</p>
+    </div>
+
+    <p>To provide a holistic assessment of deep research capabilities, we design a multi-dimensional evaluation pipeline that moves beyond static metrics. Our framework evaluates not only the <strong>quality and factuality of the final report</strong> but also the <strong>reasoning process</strong>. The pipeline consists of three specialized components:</p>
+
+    <h3>Comprehensive Adaptive Point-wise Quality Evaluation</h3>
+    <p>Deep research tasks differ widely in domain and inputs, so fixed evaluation criteria are insufficient. To solve this issue, we propose an adaptive framework that dynamically generates evaluation dimensions and criteria for each query. It combines universal quality aspects&mdash;such as coverage, insight, instruction-following, and clarity&mdash;with task-specific expertise derived from the query. For queries with attachments (e.g., PDFs or figures), it additionally evaluates grounding, checking whether the report correctly interprets and uses the provided materials based on key facts. The final report quality is then assessed by an LLM judge using these adaptive criteria.</p>
+
+    <h3>Agentic Factuality Evaluation</h3>
+    <p>To verify that claims in generated research reports are supported by reliable evidence, we introduce an agentic factuality evaluation framework that retrieves and reasons over evidence from multiple sources. Given a report, the system first decomposes it into verifiable statements and then collects evidence from both external web search and task-provided attachments. The evaluation agent then compares each statement with the gathered evidence and assigns a factuality label&mdash;<code>RIGHT</code>, <code>WRONG</code>, <code>CONFLICT</code>, or <code>UNKNOWN</code>&mdash;allowing the benchmark to capture both correctness and disagreements between different evidence sources.</p>
+
+    <h3>Process-Centric Evaluation</h3>
+    <p>Beyond evaluating the final report, we assess how a system conducts the research process itself. The framework first converts raw process logs into a structured sequence of atomic research steps (e.g., information retrieval, evidence inspection, synthesis, planning, and revision) to enable static analysis. It then evaluates the intrinsic quality of the process along dimensions such as progressiveness, redundancy, recovery, coverage, and coherence. Finally, the framework examines the <strong>alignment between process findings and report findings</strong>, checking whether conclusions in the report are supported by the research.</p>
+
+    <hr class="divider">
+
+    <h2 id="findings">Findings</h2>
+    <p>Across the three evaluation pillars &mdash; report quality, factuality, and process quality &mdash; the participating deep research systems show a clear tiered separation. <strong>The MiroThinker family delivers the strongest overall performance</strong>, claiming 3 of the top 5 spots (ranks 2, 3, and 5) in Text-Only report quality, the top 2 in Multimodal report quality, and ranking 2nd in both factuality and process quality. <strong>ChatGPT</strong> also demonstrates well-rounded performance. Gemini, Claude, and Kimi each excel in one or two dimensions but show notable weaknesses elsewhere. Qwen, Grok, Doubao, Manus, and Deepseek fall below average on most metrics.</p>
+
+
+    <h3 id="factuality-landscape">The Complex Landscape of Factuality</h3>
+    <p>Kimi, ranked 1st in report quality, drops to 13th in factuality, exposing a core tension in today's deep research systems: <strong>a well-written report is not necessarily a truthful one.</strong> Models may boost perceived quality through bolder inferences and freer synthesis, but at the cost of factual precision. Verbosity plays a key role in this tradeoff &mdash; the most verbose model (Kimi, over 60k atomic statements) ranks near the bottom in accuracy, and the second most verbose (Doubao, over 40k) fares similarly. MiroThinker, by contrast, generates less than a third of Kimi's statement volume while keeping its error count to roughly a quarter of Doubao's, striking a better balance between information density and accuracy. <strong>It is information density, not information volume, that drives factually reliable reports.</strong> A closer look at error types reveals that different models fail in fundamentally different ways: Doubao tends to fabricate outright incorrect facts (highest WRONG count), Kimi's dominant failure mode is generating unverifiable, vague claims (higher UNKNOWN proportion), and Gemini produces a significant number of self-contradictory statements within the same report (highest CONFLICT count). These three error types &mdash; fabrications, vagueness, and contradiction &mdash; point to distinct underlying capability gaps and suggest different improvement directions for each system.</p>
+
+    <div class="figure">
+      <img src="images/fig1b_verbosity_accuracy.png" alt="Verbosity vs. Factual Accuracy">
+      <p class="figure-caption">Verbosity vs. Factual Accuracy &mdash; more verbose models tend to sacrifice factual correctness.</p>
+    </div>
+
+    <h3 id="decoupling">The Decoupling of Process Quality and Report Quality</h3>
+    <p>Kimi ranks only 8th in process quality yet 1st in report quality &mdash; a 7-position gap &mdash; indicating that strong writing ability can &ldquo;polish&rdquo; a weak research process. The reverse, however, does not hold: no model with a strong process produces a poor report, suggesting that a solid research process is a reliable foundation for a good report. MiroThinker_v17 ranks 2nd in both report quality and process quality, meaning its report quality stems from a rigorous research process rather than surface-level writing skill. Furthermore, the process&ndash;report alignment metrics reveal a directional asymmetry: across all models, F&rarr;R scores (whether process findings are reflected in the report) are significantly higher than R&rarr;P scores (whether report claims can be traced back to process evidence), with the gap exceeding 2 points for most models. This means models rarely omit what they have found, <strong>but routinely introduce conclusions in their reports that lack adequate evidential support from the research process</strong> &mdash; a likely source of hallucination during the report generation stage, and a process-level explanation for the factuality issues discussed above.</p>
+
+    <div class="figure">
+      <img src="images/fig2b_fr_rp_dumbbell.png" alt="F→R vs. R→P: Process-Report Alignment Gap">
+      <p class="figure-caption">F&rarr;R vs. R&rarr;P &mdash; the directional asymmetry in process-report alignment across Text-Only and Multimodal settings.</p>
+    </div>
+
+    <h3 id="differentiators">What Truly Differentiates Strong Models from Weak Ones?</h3>
+    <p>Analyzing the score distributions across sub-dimensions, we find that <strong>models converge on &ldquo;surface-level&rdquo; capabilities but diverge sharply on &ldquo;deeper&rdquo; ones.</strong> In report quality, the gap between the highest and lowest scores on instruction following is only about 1.7 points, while the gap on insight reaches 2.5 points &mdash; nearly 1.5 times larger. The same pattern holds for process quality: the spread on search breadth is under 2 points, while the spreads on analysis depth and critical thinking both exceed 2.5 points. This divergence is even more pronounced in the Multimodal setting, where the gap on critical thinking exceeds 4 points and the weakest model scores less than half of the strongest. Similarly, coherence is uniformly high across models, but refinement &mdash; the ability to course-correct when facing search failures or conflicting evidence &mdash; varies dramatically, with top-performing models scoring above 7.5 and the lowest around 5.2, a gap of over 2 points. <strong>In short, &ldquo;being able to search,&rdquo; &ldquo;following instructions,&rdquo; and &ldquo;maintaining coherence&rdquo; are no longer the bottlenecks. The real differentiators are the ability to surface deep insights, critically evaluate evidence, and recover effectively from mistakes.</strong></p>
+
+    <div class="figure">
+      <img src="images/fig3_subdim_spread.png" alt="Sub-dimension Score Spread">
+      <p class="figure-caption">Sub-dimension Score Spread &mdash; models converge on surface-level skills but diverge on deeper capabilities.</p>
+    </div>
+
+    <h3 id="text-multimodal">Text-Only Performance &amp; Multimodal Performance</h3>
+    <p>Model rankings shift substantially when evaluation moves from Text-Only to Multimodal. Qwen exhibits the most severe degradation, with its overall report score dropping over 30% and all sub-dimensions collapsing. MiroThinker, by contrast, remains stable across settings &mdash; holding 3 of the top 5 spots in Text-Only and the top 2 in Multimodal.</p>
+    <p>The Multimodal setting also amplifies capability gaps between models: the spread on Coverage widens from under 2 points in Text-Only to nearly 2.7 in Multimodal, and Clarity expands from 1.5 to over 2.3. The most discriminative dimension is task-specific expertise (TaskSpec), where the top score is nearly double the bottom (5.339 vs. 2.794). <strong>In the Multimodal setting, the ability to demonstrate domain-relevant expertise matched to the task is the single most significant differentiator among today's deep research systems.</strong></p>
+
+
+    <hr class="divider">
+
+    <h2 id="performance">Performance</h2>
+    <p>Our latest <strong>MiroThinker 1.7</strong> series consistently ranks among the top-performing models in both <strong>text-only</strong> and <strong>multimodal deep research tasks</strong>. On more fine-grained evaluation metrics, the models also outperform most competitors in <strong>report quality</strong>, <strong>report factuality</strong>, and <strong>planning process scores</strong>, as illustrated below.</p>
+
+    <div class="figure">
+      <img src="images/heatmap_text.png" alt="Text-Only Benchmark Leaderboard Heatmap">
+      <p class="figure-caption">Text-Only Benchmark &mdash; Leaderboard Heatmap.</p>
+    </div>
+
+    <div class="figure">
+      <img src="images/heatmap_multi.png" alt="Multimodal Benchmark Leaderboard Heatmap">
+      <p class="figure-caption">Multimodal Benchmark &mdash; Leaderboard Heatmap.</p>
+    </div>
+
+  </article>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <span class="footer-text">&copy; 2026 MiroMind. All rights reserved.</span>
+      <ul class="footer-links">
+        <li><a href="https://www.miromind.ai">Home</a></li>
+        <li><a href="https://www.miromind.ai/blog">Blog</a></li>
+        <li><a href="https://www.miromind.ai/research">Research</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script>
+    window.addEventListener('scroll', () => { document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 10); });
+    // Query tabs
+    document.querySelectorAll('.query-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.query-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.query-panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+      });
+    });
+    document.querySelectorAll('.toc-list a').forEach(link => {
+      link.addEventListener('click', e => { e.preventDefault(); const t = document.querySelector(link.getAttribute('href')); if (t) window.scrollTo({ top: t.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' }); });
+    });
+  </script>
+</body>
+</html>
