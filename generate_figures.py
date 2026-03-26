@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import numpy as np
+from adjustText import adjust_text
 
 plt.rcParams.update({
     'font.family': 'serif',
@@ -133,17 +134,6 @@ scatter_sizes = {'miro': 80, 'openai': 70, 'other': 45}
 scatter_alpha = {'miro': 0.9, 'openai': 0.85, 'other': 0.6}
 scatter_edge = {'miro': '#5A8A63', 'openai': '#333', 'other': '#999'}
 
-# Label offsets (dx, dy, ha)
-label_cfg = {
-    'Doubao': (1.0, -1.0, 'left'), 'Grok': (1.0, 1.0, 'left'),
-    'Qwen': (1.0, -1.0, 'left'), 'Kimi': (1.0, -1.2, 'left'),
-    'Manus': (1.0, 1.2, 'left'), 'ChatGLM': (-1.0, 1.0, 'right'),
-    'Claude': (-1.0, -1.0, 'right'), 'MiniMax': (-1.0, 1.0, 'right'),
-    'Gemini': (1.0, -1.0, 'left'), 'OpenAI': (1.0, -0.8, 'left'),
-    'MT-1.7-mini': (1.0, 1.2, 'left'), 'MT-1.7': (-1.0, 1.0, 'right'),
-    'MT-H1': (1.0, -0.8, 'left'),
-}
-
 fig, ax = plt.subplots(figsize=(9, 6.5))
 
 xs = np.array([d['x'] for d in scatter_data])
@@ -164,11 +154,22 @@ for d in sorted(scatter_data, key=lambda d: 0 if d['group'] == 'other' else 1):
     g = d['group']
     ax.scatter(d['x'], d['y'], s=scatter_sizes[g], c=scatter_colors[g],
                alpha=scatter_alpha[g], edgecolors=scatter_edge[g], linewidths=0.8, zorder=3)
-    cfg = label_cfg.get(d['short'], (1.0, 0, 'left'))
+
+# Labels — placed by adjustText to avoid overlaps
+texts = []
+for d in scatter_data:
+    g = d['group']
     fw = 'bold' if g == 'miro' else 'normal'
     lc = MIRO if g == 'miro' else (OPENAI if g == 'openai' else '#777')
-    ax.annotate(d['short'], (d['x'], d['y']), xytext=(cfg[0] * 8, cfg[1] * 8),
-                textcoords='offset points', fontsize=9, fontweight=fw, color=lc, ha=cfg[2])
+    t = ax.text(d['x'], d['y'], d['short'], fontsize=9, fontweight=fw, color=lc)
+    texts.append(t)
+
+adjust_text(texts, x=[d['x'] for d in scatter_data], y=[d['y'] for d in scatter_data],
+            arrowprops=dict(arrowstyle='-', color='none', lw=0),
+            force_text=(0.8, 0.8), force_points=(1.5, 1.5),
+            expand_text=(1.2, 1.4), expand_points=(1.6, 1.6),
+            only_move={'text': 'xy', 'points': 'xy'},
+            max_move=30)
 
 ax.text(0.97, 0.05, f'R² = {r2:.3f}', transform=ax.transAxes, ha='right',
         fontsize=12, fontstyle='italic', color=KIMI)
