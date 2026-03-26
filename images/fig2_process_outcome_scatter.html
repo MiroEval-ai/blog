@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Process Quality vs. Overall Outcome</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: white;
+    font-family: 'Times New Roman', Times, serif;
+}
+
+.tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px 18px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 13px;
+    color: #333;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    width: 260px;
+    z-index: 100;
+}
+.tooltip.visible { opacity: 1; }
+.tooltip .tt-name {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+}
+.tooltip .tt-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+.tooltip .tt-label { color: #999; }
+.tooltip .tt-value { font-weight: bold; color: #333; }
+.tooltip .tt-rank { color: #bbb; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<svg id="chart"></svg>
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+/* ── Data (text-only, from main_result.json) ── */
+const data = [
+    {name:"Kimi-K2.5",            short:"Kimi",        x:64.2, y:68.4, group:"other"},
+    {name:"Doubao",                short:"Doubao",      x:53.1, y:60.7, group:"other"},
+    {name:"Grok",                  short:"Grok",        x:58.3, y:60.2, group:"other"},
+    {name:"Qwen-3.5-Plus",        short:"Qwen",        x:61.1, y:64.7, group:"other"},
+    {name:"Manus",                 short:"Manus",       x:64.2, y:64.0, group:"other"},
+    {name:"ChatGLM",               short:"ChatGLM",     x:65.6, y:65.8, group:"other"},
+    {name:"MiniMax-M2.5",         short:"MiniMax",     x:67.1, y:67.4, group:"other"},
+    {name:"Claude-Opus-4.6",      short:"Claude",      x:66.0, y:67.7, group:"other"},
+    {name:"Gemini-3.1-Pro",       short:"Gemini",      x:67.1, y:69.9, group:"other"},
+    {name:"OpenAI Deep Research", short:"OpenAI",      x:73.1, y:76.7, group:"openai"},
+    {name:"MiroThinker-1.7-mini", short:"MT-1.7-mini", x:68.5, y:72.9, group:"miro"},
+    {name:"MiroThinker-1.7",      short:"MT-1.7",      x:72.7, y:75.5, group:"miro"},
+    {name:"MiroThinker-H1",       short:"MT-H1",       x:74.7, y:77.5, group:"miro"},
+];
+
+/* ── Compute ranks ── */
+const procSorted = data.slice().sort((a,b) => b.x - a.x);
+const overSorted = data.slice().sort((a,b) => b.y - a.y);
+data.forEach(d => {
+    d.procRank = procSorted.findIndex(p => p.name === d.name) + 1;
+    d.overRank = overSorted.findIndex(p => p.name === d.name) + 1;
+});
+
+/* ── Colors ── */
+const MIRO_COLOR  = "#7AA383";
+const OPENAI_COLOR = "#555555";
+const OTHER_COLOR  = "#B0B0B0";
+
+function colorOf(g) { return g === "miro" ? MIRO_COLOR : g === "openai" ? OPENAI_COLOR : OTHER_COLOR; }
+function edgeOf(g)  { return g === "miro" ? "#5A8A63"  : g === "openai" ? "#333"       : "#999"; }
+function radiusOf(g){ return g === "miro" ? 8          : g === "openai" ? 7.5           : 6; }
+function alphaOf(g) { return g === "miro" ? 0.9        : g === "openai" ? 0.85          : 0.6; }
+function zOf(g)     { return g === "miro" ? 10         : g === "openai" ? 8              : 5; }
+function lblColor(g){ return g === "miro" ? MIRO_COLOR : g === "openai" ? "#333"        : "#777"; }
+function lblWeight(g){return g === "miro" ? "bold"     : "normal"; }
+
+/* ── Label offsets ── */
+const U = 9.3;
+const labelCfg = {
+    "Doubao":       {dx:  0.8*U, dy: -0.6*U, anchor:"start"},
+    "Grok":         {dx:  0.8*U, dy:  0.8*U, anchor:"start"},
+    "Qwen":         {dx:  0.8*U, dy: -0.6*U, anchor:"start"},
+    "Kimi":         {dx:  0.8*U, dy: -0.8*U, anchor:"start"},
+    "Manus":        {dx:  0.8*U, dy:  0.8*U, anchor:"start"},
+    "ChatGLM":      {dx: -0.8*U, dy:  0.8*U, anchor:"end"},
+    "Claude":       {dx: -0.8*U, dy: -0.6*U, anchor:"end"},
+    "MiniMax":      {dx: -0.8*U, dy:  0.6*U, anchor:"end"},
+    "Gemini":       {dx:  0.8*U, dy: -0.6*U, anchor:"start"},
+    "OpenAI":       {dx:  0.8*U, dy: -0.5*U, anchor:"start"},
+    "MT-1.7-mini":  {dx:  0.8*U, dy:  0.8*U, anchor:"start"},
+    "MT-1.7":       {dx: -0.8*U, dy:  0.6*U, anchor:"end"},
+    "MT-H1":        {dx:  0.8*U, dy: -0.4*U, anchor:"start"},
+};
+const defaultLbl = {dx: 0.8*U, dy: 0, anchor: "start"};
+function lblOff(name) { return labelCfg[name] || defaultLbl; }
+
+/* ── SVG setup ── */
+const W = 900, H = 600;
+const margin = {top: 50, right: 50, bottom: 65, left: 80};
+const iW = W - margin.left - margin.right;
+const iH = H - margin.top  - margin.bottom;
+
+const svg = d3.select("#chart").attr("width", W).attr("height", H);
+
+/* Glow filter */
+const defs = svg.append("defs");
+const filt = defs.append("filter")
+    .attr("id","glow").attr("x","-50%").attr("y","-50%")
+    .attr("width","200%").attr("height","200%");
+filt.append("feGaussianBlur").attr("stdDeviation","3").attr("result","blur");
+const mg = filt.append("feMerge");
+mg.append("feMergeNode").attr("in","blur");
+mg.append("feMergeNode").attr("in","SourceGraphic");
+
+const g = svg.append("g").attr("transform",`translate(${margin.left},${margin.top})`);
+
+/* ── Scales ── */
+const xExt = d3.extent(data, d => d.x);
+const yExt = d3.extent(data, d => d.y);
+const xPad = (xExt[1]-xExt[0])*0.08;
+const yPad = (yExt[1]-yExt[0])*0.08;
+
+const x = d3.scaleLinear().domain([xExt[0]-xPad*2, xExt[1]+xPad]).range([0,iW]).nice();
+const y = d3.scaleLinear().domain([yExt[0]-yPad, yExt[1]+yPad]).range([iH,0]).nice();
+
+/* ── Grid ── */
+g.append("g").attr("transform",`translate(0,${iH})`)
+    .call(d3.axisBottom(x).tickSize(-iH).tickFormat(""))
+    .call(g => { g.selectAll("line").attr("stroke","#ececec").attr("stroke-width",0.5); g.select(".domain").remove(); });
+g.append("g")
+    .call(d3.axisLeft(y).tickSize(-iW).tickFormat(""))
+    .call(g => { g.selectAll("line").attr("stroke","#ececec").attr("stroke-width",0.5); g.select(".domain").remove(); });
+
+/* ── Axes ── */
+const xAx = g.append("g").attr("transform",`translate(0,${iH})`).call(d3.axisBottom(x));
+xAx.selectAll("text").attr("fill","#888").style("font-size","12px").style("font-family","'Times New Roman',serif");
+xAx.selectAll("line").attr("stroke","#ddd"); xAx.select(".domain").attr("stroke","#ddd");
+
+const yAx = g.append("g").call(d3.axisLeft(y));
+yAx.selectAll("text").attr("fill","#888").style("font-size","12px").style("font-family","'Times New Roman',serif");
+yAx.selectAll("line").attr("stroke","#ddd"); yAx.select(".domain").attr("stroke","#ddd");
+
+/* Top & right spines */
+g.append("line").attr("x1",0).attr("y1",0).attr("x2",iW).attr("y2",0).attr("stroke","#ddd");
+g.append("line").attr("x1",iW).attr("y1",0).attr("x2",iW).attr("y2",iH).attr("stroke","#ddd");
+
+/* ── Axis labels ── */
+svg.append("text")
+    .attr("x", margin.left + iW/2).attr("y", H - 12)
+    .attr("text-anchor","middle").attr("fill","#333")
+    .style("font-size","15px").style("font-family","'Times New Roman',serif")
+    .text("Process Score (Text-Only)");
+
+svg.append("text")
+    .attr("transform","rotate(-90)")
+    .attr("x", -(margin.top + iH/2)).attr("y", 22)
+    .attr("text-anchor","middle").attr("fill","#333")
+    .style("font-size","15px").style("font-family","'Times New Roman',serif")
+    .text("Overall Score (Text-Only)");
+
+/* ── Title ── */
+svg.append("text")
+    .attr("x", margin.left + iW/2).attr("y", 28)
+    .attr("text-anchor","middle").attr("fill","#1a1a2e")
+    .style("font-size","19px").style("font-weight","bold")
+    .style("font-family","'Times New Roman',serif")
+    .text("Process Quality vs. Overall Outcome");
+
+/* ── Linear regression ── */
+function linReg(data) {
+    const n = data.length;
+    const sx = d3.sum(data, d => d.x), sy = d3.sum(data, d => d.y);
+    const sxy = d3.sum(data, d => d.x * d.y);
+    const sx2 = d3.sum(data, d => d.x * d.x);
+    const sy2 = d3.sum(data, d => d.y * d.y);
+    const slope = (n * sxy - sx * sy) / (n * sx2 - sx * sx);
+    const intercept = (sy - slope * sx) / n;
+    const yMean = sy / n;
+    const ssRes = d3.sum(data, d => Math.pow(d.y - (slope * d.x + intercept), 2));
+    const ssTot = d3.sum(data, d => Math.pow(d.y - yMean, 2));
+    const r2 = 1 - ssRes / ssTot;
+    return { slope, intercept, r2 };
+}
+
+const reg = linReg(data);
+const xD = x.domain();
+const regY0 = reg.slope * xD[0] + reg.intercept;
+const regY1 = reg.slope * xD[1] + reg.intercept;
+
+g.append("line")
+    .attr("x1", x(xD[0])).attr("y1", y(regY0))
+    .attr("x2", x(xD[1])).attr("y2", y(regY1))
+    .attr("stroke","#D4714E").attr("stroke-width", 1.5)
+    .attr("stroke-dasharray","6,4").attr("stroke-opacity", 0.7);
+
+/* R² annotation — bottom-right of chart area */
+g.append("text")
+    .attr("x", iW - 12).attr("y", iH - 14)
+    .attr("text-anchor","end").attr("fill","#D4714E")
+    .style("font-size","13px").style("font-style","italic")
+    .style("font-family","'Times New Roman',serif")
+    .text(`R\u00B2 = ${reg.r2.toFixed(3)}`);
+
+/* ── Draw points & labels ── */
+const sortedData = [...data].sort((a,b) => zOf(a.group) - zOf(b.group));
+
+const points = g.selectAll(".dot").data(sortedData).enter()
+    .append("circle").attr("class","dot")
+    .attr("cx", d => x(d.x)).attr("cy", d => y(d.y))
+    .attr("r", d => radiusOf(d.group))
+    .attr("fill", d => colorOf(d.group))
+    .attr("fill-opacity", d => alphaOf(d.group))
+    .attr("stroke", d => edgeOf(d.group))
+    .attr("stroke-width", 0.8)
+    .style("cursor","pointer")
+    .style("transition","r 0.15s ease, fill-opacity 0.15s ease");
+
+const labels = g.selectAll(".lbl").data(sortedData).enter()
+    .append("text").attr("class","lbl")
+    .attr("x", d => x(d.x) + lblOff(d.short).dx)
+    .attr("y", d => y(d.y) + lblOff(d.short).dy)
+    .attr("text-anchor", d => lblOff(d.short).anchor)
+    .attr("dominant-baseline","central")
+    .attr("fill", d => lblColor(d.group))
+    .style("font-size","10px")
+    .style("font-weight", d => lblWeight(d.group))
+    .style("font-family","'Times New Roman',serif")
+    .style("transition","opacity 0.15s ease")
+    .text(d => d.short);
+
+/* ── Tooltip ── */
+const tooltip = document.getElementById("tooltip");
+
+function showTip(ev, d) {
+    tooltip.innerHTML = `
+        <div class="tt-name" style="color:${colorOf(d.group)}">${d.name}</div>
+        <div class="tt-row">
+            <span class="tt-label">Process</span>
+            <span class="tt-value">${d.x.toFixed(1)}</span>
+            <span class="tt-rank">#${d.procRank}</span>
+        </div>
+        <div class="tt-row">
+            <span class="tt-label">Overall</span>
+            <span class="tt-value">${d.y.toFixed(1)}</span>
+            <span class="tt-rank">#${d.overRank}</span>
+        </div>`;
+
+    const tw = 260, th = 120;
+    let left = ev.clientX + 16, top = ev.clientY - 20;
+    if (left + tw > window.innerWidth  - 10) left = ev.clientX - tw - 16;
+    if (top  + th > window.innerHeight - 10) top  = window.innerHeight - th - 10;
+    if (top < 10) top = 10;
+    tooltip.style.left = left + "px";
+    tooltip.style.top  = top  + "px";
+    tooltip.classList.add("visible");
+}
+
+function hideTip() { tooltip.classList.remove("visible"); }
+
+/* ── Hover ── */
+points
+    .on("mouseenter", function(ev, d) {
+        points.attr("fill-opacity", p => p === d ? 1 : 0.15);
+        labels.style("opacity", p => p === d ? 1 : 0.15);
+        d3.select(this)
+            .attr("r", radiusOf(d.group) * 1.5)
+            .attr("filter","url(#glow)");
+        showTip(ev, d);
+    })
+    .on("mousemove", function(ev, d) { showTip(ev, d); })
+    .on("mouseleave", function(ev, d) {
+        points.attr("fill-opacity", p => alphaOf(p.group));
+        labels.style("opacity", 1);
+        d3.select(this)
+            .attr("r", radiusOf(d.group))
+            .attr("filter", null);
+        hideTip();
+    });
+</script>
+</body>
+</html>

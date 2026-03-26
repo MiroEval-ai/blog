@@ -64,7 +64,6 @@
 
     /* Figures */
     .figure { margin: 36px 0; text-align: center; }
-    .figure-wide { max-width: var(--wide-width); margin-left: calc((var(--content-width) - var(--wide-width)) / 2 - 32px); margin-right: calc((var(--content-width) - var(--wide-width)) / 2 - 32px); }
     @media (max-width: 1024px) { .figure-wide { margin-left: -32px; margin-right: -32px; } }
     .figure img { width: 100%; height: auto; border-radius: 12px; box-shadow: 0 2px 20px rgba(0,0,0,0.06); border: 1px solid var(--color-border); background: white; }
     .figure-caption { font-size: 14px; color: var(--color-text-muted); margin-top: 12px; font-style: italic; line-height: 1.5; }
@@ -177,29 +176,34 @@
         <li class="toc-sub"><a href="#verification">Verification</a></li>
         <li><a href="#evaluation">Evaluation Pipeline</a></li>
         <li><a href="#findings">Findings</a></li>
-        <li class="toc-sub"><a href="#factuality-landscape">The Complex Landscape of Factuality</a></li>
-        <li class="toc-sub"><a href="#decoupling">The Decoupling of Process Quality and Report Quality</a></li>
-        <li class="toc-sub"><a href="#differentiators">What Truly Differentiates Strong Models from Weak Ones?</a></li>
-        <li class="toc-sub"><a href="#text-multimodal">Text-Only Performance &amp; Multimodal Performance</a></li>
+        <li class="toc-sub"><a href="#finding-rankings">Rankings Shift Across Dimensions</a></li>
+        <li class="toc-sub"><a href="#finding-specificity">Specificity Is the Bottleneck</a></li>
+        <li class="toc-sub"><a href="#finding-precision">The Precision&ndash;Volume Trade-off</a></li>
+        <li class="toc-sub"><a href="#finding-process">Process Predicts Outcome</a></li>
+        <li class="toc-sub"><a href="#finding-traceability">The Traceability Gap</a></li>
+        <li class="toc-sub"><a href="#finding-multimodal">Multimodal Tasks Are Harder</a></li>
         <li><a href="#performance">Performance</a></li>
+        <li><a href="#conclusion">Conclusion</a></li>
+        <li><a href="#resources">Resources</a></li>
       </ul>
     </div>
 
     <h2 id="intro">Intro MiroEval</h2>
-    <p>Recent progress in deep research systems has been impressive, but evaluation still lags behind real user needs. Many existing benchmarks rely on synthetic tasks, focus mainly on final outputs, and provide limited coverage of multimodal settings, making it hard to measure whether a system can truly conduct research rather than simply write a plausible answer.</p>
-    <p>To address this gap, we introduce <strong>MiroEval</strong>, a framework for evaluating deep research systems, consisting of both a benchmark and an evaluation suite. Grounded in real user needs, MiroEval does not rely on manually crafted tasks alone. Instead, we study large-scale patterns in how people express research needs, identify recurring task structures, and use these patterns to automatically construct benchmark queries and evaluation instances at scale. Beyond final outcomes, MiroEval places particular emphasis on <strong>process evaluation</strong>, measuring not only the quality of final reports but also how effectively a system searches, reasons, refines its investigation, and supports its conclusions throughout the research process. The overall results show that while current systems can often produce strong-looking reports, <strong>substantial gaps remain, especially in multimodal tasks and process-level performance</strong>.</p>
-    <p>Concretely, our process evaluation covers both intrinsic process quality and alignment between the research process and the final report.</p>
+    <p>Deep research systems &mdash; tools that autonomously plan multi-step web investigations and produce long-form research reports &mdash; are rapidly moving into high-stakes domains like finance, healthcare, and legal analysis. As adoption grows, users demand more than fluent text: they need answers that are <strong>factually reliable</strong>, grounded in <strong>thorough and traceable investigation</strong>, and capable of incorporating the <strong>multimodal materials</strong> (images, PDFs, spreadsheets) that real-world queries often involve.</p>
+    <p>Existing benchmarks have made valuable progress, but key gaps remain: most evaluate only the <strong>final report</strong> without assessing the underlying research process; multimodal evaluation is rarely supported beyond short-form QA; task construction often relies on synthetic or academic queries that miss the complexity of real user needs; and static benchmarks risk going stale as the information landscape evolves.</p>
+    <p>To address these challenges, we introduce <strong>MiroEval</strong>, a benchmark and evaluation framework for deep research systems. The benchmark comprises <strong>100 tasks</strong> (70 text-only, 30 multimodal), all grounded in real user needs and constructed through two complementary paths. The evaluation suite assesses systems through three layers: <strong>Comprehensive Adaptive Synthesis Quality Evaluation</strong> that dynamically generates task-specific rubrics; <strong>Agentic Factuality Evaluation</strong> that verifies atomic claims against both live web sources and multimodal attachments; and <strong>Process-Centric Evaluation</strong> that audits research trajectories along intrinsic quality dimensions and process&ndash;report alignment. All three layers natively support multimodal inputs.</p>
+    <p>Evaluation across <strong>13 leading systems</strong> yields three principal findings: (1) system rankings shift substantially across synthesis quality, factual precision, and process rigor &mdash; each dimension provides non-redundant information; (2) process quality serves as a reliable predictor of overall outcome while revealing weaknesses invisible to output-level metrics; and (3) multimodal tasks pose substantially greater challenges, with most systems declining by 3&ndash;10 points. Across all dimensions, the <strong>MiroThinker series</strong> demonstrates the most balanced performance, with MiroThinker-H1 achieving the highest overall scores in both text-only (77.5) and multimodal (74.5) settings.</p>
 
     <h2 id="benchmark">Benchmark Construction</h2>
 
     <div class="figure">
-      <img src="images/Picture 1.svg" alt="MiroEval Benchmark Construction Pipeline" style="background:transparent; border:none; box-shadow:none;">
+      <img src="fingers/Query Collection and Verification.svg" alt="MiroEval Benchmark Construction Pipeline" style="background:transparent; border:none; box-shadow:none;">
       <p class="figure-caption">The MiroEval benchmark construction pipeline: (a) User-Derived Query Curation, (b) Automated Query Generation, and (c) Benchmark Assembly and Verification.</p>
     </div>
 
-    <p>A reliable benchmark for deep research systems requires queries that are authentic, diverse, and temporally relevant. We achieve these properties by grounding query construction in real user needs and live web signals. MiroEval contains <strong>100 queries &mdash; 70 text-only and 30 multimodal</strong> &mdash; constructed through two complementary paths:</p>
+    <p>A reliable benchmark for deep research systems requires queries that are authentic, diverse, and temporally relevant. The final benchmark comprises <strong>100 queries &mdash; 70 text-only and 30 multimodal</strong> &mdash; spanning <strong>12 domains</strong> (led by Technology, Finance, and Science) and <strong>10 task types</strong> (including Decision &amp; Recommendation, Comparative Analysis, and Fact Enumeration &amp; Verification). Task types are spread across domains rather than concentrated in any single one, ensuring the benchmark evaluates domain knowledge and reasoning capabilities jointly. Queries are constructed through two complementary paths:</p>
     <ol>
-      <li><strong>User-derived curation (65 queries)</strong> &mdash; Real user interactions transformed through privacy-preserving rewrites and difficulty stratification.</li>
+      <li><strong>User-derived curation (65 queries)</strong> &mdash; Query patterns from internal testing, transformed through privacy-preserving rewrites and difficulty stratification.</li>
       <li><strong>Automated generation (35 queries)</strong> &mdash; Text-only queries grounded in real-time web trends, refreshable on demand.</li>
     </ol>
 
@@ -209,7 +213,7 @@
     </div>
 
     <h3 id="user-curation">User-Derived Query Curation</h3>
-    <p>We source queries from real interactions with MiroMind, spanning text-only and multimodal inputs (images, PDFs, spreadsheets, slides), then apply a three-stage pipeline:</p>
+    <p>The first path draws on query patterns observed during a closed internal testing phase of the MiroMind deep research system, covering both text-only and multimodal interactions (images, PDFs, spreadsheets, slides). Importantly, no original user query appears in the benchmark in any form &mdash; the pipeline analyzes structural characteristics of internal testing queries and produces entirely new benchmark queries that preserve the topic distribution, complexity profile, and modality coverage while containing no user-identifiable content. The construction follows a three-stage pipeline:</p>
     <ol>
       <li><strong>Privacy filtering</strong> &mdash; Exclude sensitive content and replace named entities with realistic substitutes to prevent source identification.</li>
       <li><strong>Feature-driven classification</strong> &mdash; Tag each query with evaluation features from a taxonomy of 8 capabilities (e.g., planning, search, factuality, multimodal understanding) to guide balanced sampling.</li>
@@ -222,7 +226,7 @@
     <ol>
       <li><strong>Search validation</strong> &mdash; Require &ge; 3 web results from &ge; 2 distinct domains. &rarr; 152 retained (84.4%)</li>
       <li><strong>Deep-research necessity</strong> &mdash; An LLM confirms the query genuinely demands external sources. &rarr; 96 retained (63.2%)</li>
-      <li><strong>Inverse quality assessment</strong> &mdash; The most critical filter. A separate LLM answers the query without search access; we keep only queries where this baseline answer is inadequate. &rarr; 35 retained (19.4% cumulative)</li>
+      <li><strong>Inverse quality assessment</strong> &mdash; The most discriminative filter. A separate LLM answers the query without search access; we keep only queries where this baseline answer is demonstrably inadequate. &rarr; 50 retained (52.1%), then manually selected down to <strong>35</strong> (19.4% cumulative from generation)</li>
     </ol>
 
     <h3 id="verification">Verification</h3>
@@ -263,60 +267,92 @@
     <h2 id="evaluation">Evaluation Pipeline</h2>
 
     <div class="figure">
-      <img src="fingers/evaluation_pipeline.svg" alt="Evaluation Pipeline: Adaptive Quality Evaluation, Agentic Factuality Evaluation, and Process-Centric Evaluation" style="background:transparent; border:none; box-shadow:none;">
-      <p class="figure-caption">The MiroEval evaluation pipeline: (a) Comprehensive Adaptive Point-wise Quality Evaluation, (b) Agentic Factuality Evaluation, and Process-Centric Evaluation.</p>
+      <img src="fingers/evaluation_pipeline.svg" alt="Evaluation Pipeline: Adaptive Synthesis Quality Evaluation, Agentic Factuality Evaluation, and Process-Centric Evaluation" style="background:transparent; border:none; box-shadow:none;">
+      <p class="figure-caption">The MiroEval evaluation pipeline: (a) Comprehensive Adaptive Synthesis Quality Evaluation, (b) Agentic Factuality Evaluation, and (c) Process-Centric Evaluation.</p>
     </div>
 
     <p>To provide a holistic assessment of deep research capabilities, we design a multi-dimensional evaluation pipeline that moves beyond static metrics. Our framework evaluates not only the <strong>quality and factuality of the final report</strong> but also the <strong>reasoning process</strong>. The pipeline consists of three specialized components:</p>
 
-    <h3>Comprehensive Adaptive Point-wise Quality Evaluation</h3>
-    <p>Deep research tasks differ widely in domain and inputs, so fixed evaluation criteria are insufficient. To solve this issue, we propose an adaptive framework that dynamically generates evaluation dimensions and criteria for each query. It combines universal quality aspects&mdash;such as coverage, insight, instruction-following, and clarity&mdash;with task-specific expertise derived from the query. For queries with attachments (e.g., PDFs or figures), it additionally evaluates grounding, checking whether the report correctly interprets and uses the provided materials based on key facts. The final report quality is then assessed by an LLM judge using these adaptive criteria.</p>
+    <h3>Comprehensive Adaptive Synthesis Quality Evaluation</h3>
+    <p>Deep research tasks vary substantially in domain, objectives, and input modality, so fixed evaluation criteria cannot adequately capture synthesis quality. We propose an adaptive framework that dynamically tailors evaluation dimensions, criteria, and weights to each task. It combines universal quality aspects &mdash; such as Coverage, Insight, Instruction-following, and Clarity &mdash; with task-specific expertise dimensions derived from the query. For <strong>text-only queries</strong>, the framework generates 1&ndash;3 task-specific expertise dimensions based on the instruction (e.g., &ldquo;Policy Pragmatism&rdquo; for a cross-national policy comparison). For <strong>attachment-augmented queries</strong>, it additionally introduces a Grounding dimension, requiring correct interpretation and meaningful analytical expansion of the provided materials &mdash; guided by key facts extracted from the raw attachments (e.g., tables from spreadsheets, figures from PDFs). This transforms abstract evaluation into precise, attachment-specific checkpoints. The final synthesis quality is then assessed by an LLM judge with dynamic weighting across all dimensions.</p>
 
     <h3>Agentic Factuality Evaluation</h3>
-    <p>To verify that claims in generated research reports are supported by reliable evidence, we introduce an agentic factuality evaluation framework that retrieves and reasons over evidence from multiple sources. Given a report, the system first decomposes it into verifiable statements and then collects evidence from both external web search and task-provided attachments. The evaluation agent then compares each statement with the gathered evidence and assigns a factuality label&mdash;<code>RIGHT</code>, <code>WRONG</code>, <code>CONFLICT</code>, or <code>UNKNOWN</code>&mdash;allowing the benchmark to capture both correctness and disagreements between different evidence sources.</p>
+    <p>Unlike conventional fact-checking that assumes a single evidence source, real-world research tasks involve heterogeneous evidence from both external web resources and task-provided attachments &mdash; which may even provide conflicting conclusions. To handle this, we introduce an agentic factuality evaluation framework that retrieves and reasons over evidence from multiple sources. Given a report, the system first decomposes it into a set of verifiable statements. For each statement, the evaluation agent collects evidence from two complementary sources: external web search and task-provided attachments (using native multimodal processing for images/PDFs, and retrieval-augmented processing for spreadsheets/slides). The agent then assesses the consistency between each statement and its evidence, assigning a factuality label &mdash; <code>RIGHT</code>, <code>WRONG</code>, <code>CONFLICT</code>, or <code>UNKNOWN</code> &mdash; where <code>CONFLICT</code> explicitly captures disagreements between heterogeneous sources rather than forcing them into binary judgments.</p>
 
     <h3>Process-Centric Evaluation</h3>
-    <p>Beyond evaluating the final report, we assess how a system conducts the research process itself. The framework first converts raw process logs into a structured sequence of atomic research steps (e.g., information retrieval, evidence inspection, synthesis, planning, and revision) to enable static analysis. It then evaluates the intrinsic quality of the process along dimensions such as progressiveness, redundancy, recovery, coverage, and coherence. Finally, the framework examines the <strong>alignment between process findings and report findings</strong>, checking whether conclusions in the report are supported by the research.</p>
+    <p>Synthesis quality and factual verification assess the final artifact, but do not directly evaluate the quality of the underlying research process. A system may produce a superficially strong report through redundant exploration or brittle reasoning, while another may follow a disciplined process whose findings are only partially reflected in the final write-up. Our framework addresses this through three components:</p>
+    <p><strong>Process Representation</strong> &mdash; Raw process logs are decomposed into a structured sequence of atomic research steps (e.g., information acquisition, evidence inspection, intermediate synthesis, planning, revision, and error correction), recovering their local dependency structure and extracting key process findings.</p>
+    <p><strong>Process Quality Evaluation</strong> &mdash; The intrinsic quality of the research process is evaluated along five complementary dimensions: <em>Search Breadth</em> (range of sources and perspectives explored), <em>Analytical Depth</em> (multi-step reasoning beyond surface retrieval), <em>Progressive Refinement</em> (iterative improvement as new evidence is gathered), <em>Critical Thinking</em> (evaluation of source reliability and conflicting evidence), and <em>Efficiency</em> (avoidance of redundancy and circular exploration).</p>
+    <p><strong>Process&ndash;Report Alignment</strong> &mdash; We examine bidirectional alignment between process findings and report findings. <em>Process&rarr;Report (P&rarr;R)</em> checks whether major findings established during the process are adequately realized in the report; <em>Report&rarr;Process (R&rarr;P)</em> checks whether report conclusions can be traced back to sufficient support in the process; and <em>Contradiction Detection</em> evaluates whether the system identifies and resolves conflicting evidence rather than silently propagating inconsistencies.</p>
 
     <hr class="divider">
 
     <h2 id="findings">Findings</h2>
-    <p>Across the three evaluation pillars &mdash; report quality, factuality, and process quality &mdash; the participating deep research systems show a clear tiered separation. <strong>The MiroThinker family delivers the strongest overall performance</strong>, claiming 3 of the top 5 spots (ranks 2, 3, and 5) in Text-Only report quality, the top 2 in Multimodal report quality, and ranking 2nd in both factuality and process quality. <strong>ChatGPT</strong> also demonstrates well-rounded performance. Gemini, Claude, and Kimi each excel in one or two dimensions but show notable weaknesses elsewhere. Qwen, Grok, Doubao, Manus, and Deepseek fall below average on most metrics.</p>
+    <p>We evaluated 13 leading deep research systems across synthesis quality, factuality, and process quality. Six findings emerged &mdash; together they paint a far more nuanced picture than any single leaderboard can.</p>
 
-
-    <h3 id="factuality-landscape">The Complex Landscape of Factuality</h3>
-    <p>Kimi, ranked 1st in report quality, drops to 13th in factuality, exposing a core tension in today's deep research systems: <strong>a well-written report is not necessarily a truthful one.</strong> Models may boost perceived quality through bolder inferences and freer synthesis, but at the cost of factual precision. Verbosity plays a key role in this tradeoff &mdash; the most verbose model (Kimi, over 60k atomic statements) ranks near the bottom in accuracy, and the second most verbose (Doubao, over 40k) fares similarly. MiroThinker, by contrast, generates less than a third of Kimi's statement volume while keeping its error count to roughly a quarter of Doubao's, striking a better balance between information density and accuracy. <strong>It is information density, not information volume, that drives factually reliable reports.</strong> A closer look at error types reveals that different models fail in fundamentally different ways: Doubao tends to fabricate outright incorrect facts (highest WRONG count), Kimi's dominant failure mode is generating unverifiable, vague claims (higher UNKNOWN proportion), and Gemini produces a significant number of self-contradictory statements within the same report (highest CONFLICT count). These three error types &mdash; fabrications, vagueness, and contradiction &mdash; point to distinct underlying capability gaps and suggest different improvement directions for each system.</p>
-
-    <div class="figure">
-      <img src="images/fig1b_verbosity_accuracy.png" alt="Verbosity vs. Factual Accuracy">
-      <p class="figure-caption">Verbosity vs. Factual Accuracy &mdash; more verbose models tend to sacrifice factual correctness.</p>
-    </div>
-
-    <h3 id="decoupling">The Decoupling of Process Quality and Report Quality</h3>
-    <p>Kimi ranks only 8th in process quality yet 1st in report quality &mdash; a 7-position gap &mdash; indicating that strong writing ability can &ldquo;polish&rdquo; a weak research process. The reverse, however, does not hold: no model with a strong process produces a poor report, suggesting that a solid research process is a reliable foundation for a good report. MiroThinker_v17 ranks 2nd in both report quality and process quality, meaning its report quality stems from a rigorous research process rather than surface-level writing skill. Furthermore, the process&ndash;report alignment metrics reveal a directional asymmetry: across all models, F&rarr;R scores (whether process findings are reflected in the report) are significantly higher than R&rarr;P scores (whether report claims can be traced back to process evidence), with the gap exceeding 2 points for most models. This means models rarely omit what they have found, <strong>but routinely introduce conclusions in their reports that lack adequate evidential support from the research process</strong> &mdash; a likely source of hallucination during the report generation stage, and a process-level explanation for the factuality issues discussed above.</p>
+    <h3 id="finding-rankings">Rankings Shift Across Dimensions</h3>
+    <p>Kimi tops the synthesis quality chart at 75.7 &mdash; its reports read well, feel authoritative, and are clearly structured. Yet its factuality score of 65.4 puts it near the bottom, trailing OpenAI Deep Research by nearly 18 points. The flip side is equally striking: Manus produces the weakest reports (55.4) yet outscores several stronger-report systems on factuality (72.6), including Gemini and MiniMax.</p>
+    <p>These two cases, from opposite ends of the synthesis spectrum, illustrate the same point: <strong>a polished report does not guarantee factual grounding, and a factually disciplined system does not necessarily produce well-structured output.</strong> The three evaluation dimensions each capture a different facet of system capability &mdash; no single dimension can substitute for the others.</p>
 
     <div class="figure">
-      <img src="images/fig2b_fr_rp_dumbbell.png" alt="F→R vs. R→P: Process-Report Alignment Gap">
-      <p class="figure-caption">F&rarr;R vs. R&rarr;P &mdash; the directional asymmetry in process-report alignment across Text-Only and Multimodal settings.</p>
+      <img src="images/fig1_dimension_rank_bump.png" alt="Dimension-Level Rank Shifts (Text-Only)">
+      <p class="figure-caption">Dimension-Level Rank Shifts (Text-Only) &mdash; Kimi (orange) drops sharply from Synthesis to Factuality; Manus (blue) rises substantially.</p>
     </div>
 
-    <h3 id="differentiators">What Truly Differentiates Strong Models from Weak Ones?</h3>
-    <p>Analyzing the score distributions across sub-dimensions, we find that <strong>models converge on &ldquo;surface-level&rdquo; capabilities but diverge sharply on &ldquo;deeper&rdquo; ones.</strong> In report quality, the gap between the highest and lowest scores on instruction following is only about 1.7 points, while the gap on insight reaches 2.5 points &mdash; nearly 1.5 times larger. The same pattern holds for process quality: the spread on search breadth is under 2 points, while the spreads on analysis depth and critical thinking both exceed 2.5 points. This divergence is even more pronounced in the Multimodal setting, where the gap on critical thinking exceeds 4 points and the weakest model scores less than half of the strongest. Similarly, coherence is uniformly high across models, but refinement &mdash; the ability to course-correct when facing search failures or conflicting evidence &mdash; varies dramatically, with top-performing models scoring above 7.5 and the lowest around 5.2, a gap of over 2 points. <strong>In short, &ldquo;being able to search,&rdquo; &ldquo;following instructions,&rdquo; and &ldquo;maintaining coherence&rdquo; are no longer the bottlenecks. The real differentiators are the ability to surface deep insights, critically evaluate evidence, and recover effectively from mistakes.</strong></p>
+    <h3 id="finding-specificity">Specificity Is the Bottleneck</h3>
+    <p>What&rsquo;s holding reports back? Among the five synthesis sub-metrics, <strong>Specificity</strong> &mdash; the ability to provide granular, evidence-grounded details rather than surface-level summaries &mdash; emerges as the universal weak spot. It is the lowest-scoring sub-metric for nearly every system, trailing Coverage by 10 to 14 points. OpenAI scores 78.2 on Coverage but only 69.1 on Specificity; Manus shows a similar gap at 61.2 vs. 48.1.</p>
+    <p>Instruction-following, by contrast, is uniformly high among top systems and no longer separates them. The real differentiator is <strong>Insight</strong> &mdash; scores range from 54.8 (Manus) to 80.3 (MiroThinker-H1), a 25-point spread far wider than Coverage or Instruction-following. <strong>The ability to synthesize non-obvious analytical observations, rather than merely aggregating retrieved information, is what most separates strong reports from weak ones.</strong></p>
 
     <div class="figure">
       <img src="images/fig3_subdim_spread.png" alt="Sub-dimension Score Spread">
-      <p class="figure-caption">Sub-dimension Score Spread &mdash; models converge on surface-level skills but diverge on deeper capabilities.</p>
+      <p class="figure-caption">Sub-dimension Score Spread &mdash; Specificity is universally the lowest synthesis sub-metric, while Insight shows the widest spread across systems. Process sub-dimensions reveal a similar pattern: Analytical Depth separates strong from weak.</p>
     </div>
 
-    <h3 id="text-multimodal">Text-Only Performance &amp; Multimodal Performance</h3>
-    <p>Model rankings shift substantially when evaluation moves from Text-Only to Multimodal. Qwen exhibits the most severe degradation, with its overall report score dropping over 30% and all sub-dimensions collapsing. MiroThinker, by contrast, remains stable across settings &mdash; holding 3 of the top 5 spots in Text-Only and the top 2 in Multimodal.</p>
-    <p>The Multimodal setting also amplifies capability gaps between models: the spread on Coverage widens from under 2 points in Text-Only to nearly 2.7 in Multimodal, and Clarity expands from 1.5 to over 2.3. The most discriminative dimension is task-specific expertise (TaskSpec), where the top score is nearly double the bottom (5.339 vs. 2.794). <strong>In the Multimodal setting, the ability to demonstrate domain-relevant expertise matched to the task is the single most significant differentiator among today's deep research systems.</strong></p>
+    <h3 id="finding-precision">The Precision&ndash;Volume Trade-off</h3>
+    <p>Why do some systems score high on synthesis but low on factuality? The answer lies in how they generate claims.</p>
+    <p>Kimi&rsquo;s Insight score reaches 79.8 (the highest), producing analytically rich interpretations &mdash; but alongside 595 wrong claims and 1,256 unverifiable ones. Its reports are full of sharp analysis that isn&rsquo;t always backed by evidence. Manus is the mirror image: Insight of just 54.8, but only 191 wrong claims &mdash; trading analytical depth for factual reliability.</p>
+    <p>The pattern extends beyond these two. ChatGLM and Gemini each produce over 4,000 correct claims, but with 580 and 526 wrong claims respectively, dragging their factuality ratios into the low 70s. OpenAI generates fewer correct claims (3,335) but keeps wrong claims to just 170 and unverifiable ones to 496, achieving the highest ratio of 83.3. <strong>Quality comes from discipline, not volume.</strong></p>
 
+    <div class="figure">
+      <img src="images/fig1b_verbosity_accuracy.png" alt="Verbosity vs. Factual Accuracy">
+      <p class="figure-caption">Verbosity vs. Factual Accuracy &mdash; a negative correlation between the total number of generated statements and factual accuracy across systems.</p>
+    </div>
+
+    <h3 id="finding-process">Process Predicts Outcome</h3>
+    <p>Does the research process actually matter for the final result? The data says yes &mdash; strongly.</p>
+    <p>The top three systems on process &mdash; MiroThinker-H1, OpenAI, and MiroThinker-1.7 &mdash; are also the top three overall. The weakest process system (Doubao at 53.1) lands near the bottom on outcome too. The Pearson correlation between process score and overall outcome reaches <strong>0.88</strong>.</p>
+    <p>But not all aspects of process matter equally. Most systems achieve reasonable Search Breadth (scores cluster between 71 and 77). The real separator is <strong>Analytical Depth</strong> &mdash; scores spread from 41.6 (Doubao) to 67.3 (OpenAI), a gap of over 25 points. Claude is a telling case: its Breadth of 79.1 is the highest of all systems, but its Depth of 58.8 trails by over 20 points &mdash; it retrieves broadly but rarely follows up with targeted investigation. <strong>Systems have learned how to search. They have not yet learned how to think deeply.</strong></p>
+
+    <div class="figure">
+      <img src="images/fig2_process_outcome_scatter.png" alt="Process Quality vs. Overall Outcome">
+      <p class="figure-caption">Process Quality vs. Overall Outcome &mdash; a strong positive correlation (r=0.88) between process scores and overall performance across all 13 systems.</p>
+    </div>
+
+    <h3 id="finding-traceability">The Traceability Gap</h3>
+    <p>Process evaluation reveals something that output-level metrics cannot: <strong>reports routinely contain more than what the research process actually found.</strong></p>
+    <p>Models are good at including what they discovered during research &mdash; Findings&rarr;Report scores are generally high, reaching 87.0 at the top. But Report&rarr;Process tells a different story: even the best system achieves only 63.3, and most fall below 55. The gap exceeds 23 points even for top performers.</p>
+    <p>This means a substantial portion of report content cannot be traced back to the documented research process. Systems routinely introduce claims, interpretations, or synthesized content that do not originate from their search and analysis steps. <strong>Models rarely forget what they found &mdash; but they routinely make things up when writing.</strong> Whether this reflects implicit reasoning, hallucination, or unlogged intermediate steps, the practical implication is the same: a significant traceability gap that undermines the auditability of deep research outputs.</p>
+
+    <div class="figure">
+      <img src="images/fig2b_fr_rp_dumbbell.png" alt="F→R vs. R→P: Process-Report Alignment Gap">
+      <p class="figure-caption">Findings&rarr;Report vs. Report&rarr;Process &mdash; models rarely omit what they found, but routinely introduce unsupported conclusions.</p>
+    </div>
+
+    <h3 id="finding-multimodal">Multimodal Tasks Are Harder &mdash; But Not Where You&rsquo;d Expect</h3>
+    <p>When images, PDFs, and spreadsheets enter the mix, every system declines. Overall scores drop by 3 to 10 points. MiroThinker-H1 proves the most resilient with a decline of only 3.0 points, while Qwen takes the biggest hit at 8.6.</p>
+    <p>But here is the surprise: <strong>factuality barely moves</strong>, dropping just 0.2 points on average. The real bottleneck lies in synthesis quality (average decline of ~6 points, with Qwen plunging 15.4) and process quality (~4 points). The multimodal challenge is not about verifying facts from visual sources &mdash; it is about understanding visual content and weaving it into a coherent research process and report.</p>
+    <p><strong>When real-world attachments enter the picture, visual understanding and domain expertise become the biggest differentiators.</strong></p>
+
+    <div class="figure">
+      <img src="images/fig3_textonly_multimodal_dumbbell.png" alt="Text-Only vs. Multimodal Overall Score Comparison">
+      <p class="figure-caption">Text-Only vs. Multimodal &mdash; overall scores across both settings. Factuality remains stable while synthesis and process quality decline.</p>
+    </div>
 
     <hr class="divider">
 
     <h2 id="performance">Performance</h2>
-    <p>Our latest <strong>MiroThinker 1.7</strong> series consistently ranks among the top-performing models in both <strong>text-only</strong> and <strong>multimodal deep research tasks</strong>. On more fine-grained evaluation metrics, the models also outperform most competitors in <strong>report quality</strong>, <strong>report factuality</strong>, and <strong>planning process scores</strong>, as illustrated below.</p>
+    <p>In the Text-Only setting, systems separate into roughly three performance tiers. MiroThinker-H1, OpenAI Deep Research, and MiroThinker-1.7 form the top tier at 77.5, 76.7, and 75.5 respectively, with MiroThinker-1.7-mini close behind at 72.9. Gemini, Kimi, MiniMax, and ChatGLM constitute a middle tier spanning approximately 66 to 70. The remaining systems &mdash; Manus, Qwen, Claude, Doubao, and Grok &mdash; fall below 68, with Grok trailing at 60.2. A broadly similar grouping holds in the MultiModal setting, though overall scores decrease by 3 to 10 points and the inter-system gaps narrow.</p>
+    <p>What distinguishes the <strong>MiroThinker series</strong> is not dominance on any single dimension, but <strong>consistent competitiveness across all three</strong>. MiroThinker-H1 achieves the highest overall score in both Text-Only (77.5) and MultiModal (74.5), ranking first or second on every individual dimension. MiroThinker-1.7 follows closely, placing among the top three on Synthesis, Factuality, and Process with no significant weakness on any axis. This balanced profile contrasts with other top-performing systems that exhibit clear dimension-specific trade-offs: Kimi excels on Synthesis but lags on Factuality, while OpenAI leads decisively on Factuality but is surpassed on Synthesis by multiple systems.</p>
 
     <div class="figure">
       <img src="images/heatmap_text.png" alt="Text-Only Benchmark Leaderboard Heatmap">
@@ -327,6 +363,27 @@
       <img src="images/heatmap_multi.png" alt="Multimodal Benchmark Leaderboard Heatmap">
       <p class="figure-caption">Multimodal Benchmark &mdash; Leaderboard Heatmap.</p>
     </div>
+
+    <hr class="divider">
+
+    <h2 id="conclusion">Conclusion</h2>
+    <p>Deep research systems have made remarkable progress &mdash; but our evaluation reveals that progress is uneven. A system that writes compelling reports may be factually unreliable. A system with strong factual discipline may lack analytical depth. And a system that searches broadly may never follow up with the targeted investigation that turns good retrieval into genuine insight.</p>
+    <p>Three takeaways stand out for anyone building or choosing a deep research system:</p>
+    <ol>
+      <li><strong>Evaluate on multiple dimensions.</strong> Synthesis quality, factuality, and process quality each capture something the others miss. Relying on any single metric gives an incomplete &mdash; and potentially misleading &mdash; picture.</li>
+      <li><strong>Invest in process, not just output.</strong> Process quality is the strongest single predictor of overall outcome (r=0.88), and the traceability gap between research and report is the most underexplored failure mode in today&rsquo;s systems.</li>
+      <li><strong>Multimodal is the next frontier.</strong> Factual accuracy holds up when attachments enter the mix, but synthesis and process quality drop sharply &mdash; suggesting that visual understanding and multimodal reasoning remain key open challenges.</li>
+    </ol>
+    <p>MiroEval provides a holistic diagnostic tool for the next generation of deep research agents. The benchmark is grounded in real user needs, refreshable as the world moves on, and designed to evaluate not just what a system produces, but how it gets there.</p>
+
+    <hr class="divider">
+
+    <h2 id="resources">Resources</h2>
+    <ul>
+      <li><strong>Paper</strong>: <a href="https://arxiv.org/abs/2507.xxxxx">arXiv</a></li>
+      <li><strong>Project Page</strong>: <a href="https://miroeval.github.io/website/">miroeval.github.io/website</a></li>
+      <li><strong>GitHub</strong>: <a href="https://github.com/MiroMindAI/MiroEval">github.com/MiroMindAI/MiroEval</a></li>
+    </ul>
 
   </article>
 

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dimension-Level Rank Shifts</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: white;
+    font-family: 'Times New Roman', Times, serif;
+}
+#chart { width: 100%; height: auto; display: block; }
+
+.tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px 18px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 13px;
+    color: #333;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 100;
+    width: 270px;
+}
+.tooltip.visible { opacity: 1; }
+.tooltip .tt-name {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+}
+.tooltip .tt-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+.tooltip .tt-label { color: #999; }
+.tooltip .tt-value { font-weight: bold; color: #333; min-width: 40px; text-align: right; }
+.tooltip .tt-rank { color: #bbb; font-size: 12px; min-width: 30px; text-align: right; }
+.tooltip .tt-shift {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #eee;
+    font-size: 12px;
+    color: #888;
+}
+.tooltip .shift-up { color: #4CAF50; font-weight: bold; }
+.tooltip .shift-down { color: #E8696A; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<svg id="chart"></svg>
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+/* ── Data (text-only, from main_result.json) ── */
+const models = [
+    {name:"Kimi-K2.5",              short:"Kimi",         report:75.7, factuality:65.4, process:64.2, overall:68.4, group:"kimi"},
+    {name:"Doubao",                  short:"Doubao",       report:64.2, factuality:64.9, process:53.1, overall:60.7, group:"other"},
+    {name:"Grok",                    short:"Grok",         report:58.7, factuality:63.7, process:58.3, overall:60.2, group:"other"},
+    {name:"Qwen-3.5-Plus",          short:"Qwen",         report:60.0, factuality:73.1, process:61.1, overall:64.7, group:"other"},
+    {name:"Manus",                   short:"Manus",        report:55.4, factuality:72.6, process:64.2, overall:64.0, group:"manus"},
+    {name:"ChatGLM",                 short:"ChatGLM",      report:63.2, factuality:68.6, process:65.6, overall:65.8, group:"other"},
+    {name:"MiniMax-M2.5",           short:"MiniMax",      report:63.3, factuality:71.8, process:67.1, overall:67.4, group:"other"},
+    {name:"Claude-Opus-4.6",        short:"Claude",       report:67.3, factuality:69.8, process:66.0, overall:67.7, group:"other"},
+    {name:"Gemini-3.1-Pro",         short:"Gemini",       report:71.2, factuality:71.3, process:67.1, overall:69.9, group:"other"},
+    {name:"OpenAI Deep Research",   short:"OpenAI",       report:73.8, factuality:83.3, process:73.1, overall:76.7, group:"openai"},
+    {name:"MiroThinker-1.7-mini",   short:"MT-1.7-mini",  report:74.0, factuality:76.2, process:68.5, overall:72.9, group:"miro"},
+    {name:"MiroThinker-1.7",        short:"MT-1.7",       report:74.3, factuality:79.4, process:72.7, overall:75.5, group:"miro"},
+    {name:"MiroThinker-H1",         short:"MT-H1",        report:76.7, factuality:81.1, process:74.7, overall:77.5, group:"miro"},
+];
+
+/* ── Compute ranks (1 = best) ── */
+const dims = ["report", "factuality", "process"];
+dims.forEach(dim => {
+    const sorted = models.slice().sort((a, b) => b[dim] - a[dim] || b.overall - a.overall);
+    sorted.forEach((m, i) => { m[dim + "Rank"] = i + 1; });
+});
+
+/* ── Colors & styles ── */
+const COLORS   = { miro:"#7AA383", openai:"#555555", kimi:"#D4714E", manus:"#5B9BD5", other:"#C8C8C8" };
+const STROKE_W = { miro:2.5, openai:2.0, kimi:2.5, manus:2.5, other:1.2 };
+const DOT_R    = { miro:5, openai:4.5, kimi:5, manus:5, other:3.5 };
+const LBL_W    = { miro:"bold", openai:"normal", kimi:"bold", manus:"bold", other:"normal" };
+const Z_ORDER  = { other:0, openai:1, kimi:2, manus:2, miro:3 };
+const LBL_SIZE = { miro:"11.5px", openai:"11px", kimi:"11.5px", manus:"11.5px", other:"10px" };
+
+/* ── Layout ── */
+const N = models.length;
+const W = 1000, H = 640;
+const margin = { top: 70, bottom: 30, left: 150, right: 150 };
+const iW = W - margin.left - margin.right;
+const iH = H - margin.top - margin.bottom;
+
+const svg = d3.select("#chart")
+    .attr("viewBox", `0 0 ${W} ${H}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
+
+/* Glow filter */
+const defs = svg.append("defs");
+const filt = defs.append("filter")
+    .attr("id","glow").attr("x","-50%").attr("y","-50%")
+    .attr("width","200%").attr("height","200%");
+filt.append("feGaussianBlur").attr("stdDeviation","3").attr("result","blur");
+const merge = filt.append("feMerge");
+merge.append("feMergeNode").attr("in","blur");
+merge.append("feMergeNode").attr("in","SourceGraphic");
+
+/* Title */
+svg.append("text")
+    .attr("x", W / 2).attr("y", 28)
+    .attr("text-anchor","middle").attr("fill","#1a1a2e")
+    .style("font-size","19px").style("font-weight","bold")
+    .style("font-family","'Times New Roman',serif")
+    .text("Dimension-Level Rank Shifts (Text-Only)");
+
+const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+/* ── Scales ── */
+const xScale = d3.scalePoint().domain([0,1,2]).range([0, iW]);
+const yScale = d3.scaleLinear().domain([1, N]).range([0, iH]);
+
+/* Column headers */
+const dimLabels = ["Report", "Factuality", "Process"];
+dimLabels.forEach((label, i) => {
+    g.append("text")
+        .attr("x", xScale(i)).attr("y", -30)
+        .attr("text-anchor","middle").attr("fill","#555")
+        .style("font-size","15px").style("font-weight","bold")
+        .style("font-family","'Times New Roman',serif")
+        .text(label);
+
+    /* Vertical guide */
+    g.append("line")
+        .attr("x1", xScale(i)).attr("x2", xScale(i))
+        .attr("y1", -12).attr("y2", iH + 12)
+        .attr("stroke","#f0f0f0").attr("stroke-width",1);
+});
+
+/* Horizontal rank guides */
+for (let r = 1; r <= N; r++) {
+    g.append("line")
+        .attr("x1", -15).attr("x2", iW + 15)
+        .attr("y1", yScale(r)).attr("y2", yScale(r))
+        .attr("stroke","#f5f5f5").attr("stroke-width", 0.5);
+}
+
+/* ── Line generator ── */
+const lineGen = d3.line()
+    .x((d, i) => xScale(i))
+    .y(d => yScale(d))
+    .curve(d3.curveBumpX);
+
+/* ── Draw models (sorted by z-order) ── */
+const sorted = models.slice().sort((a, b) => Z_ORDER[a.group] - Z_ORDER[b.group]);
+
+const modelGroups = g.selectAll(".mg").data(sorted, d => d.name).enter()
+    .append("g").attr("class","mg");
+
+/* Invisible wide hit path */
+modelGroups.append("path").attr("class","hit")
+    .attr("d", m => lineGen([m.reportRank, m.factualityRank, m.processRank]))
+    .attr("fill","none").attr("stroke","transparent").attr("stroke-width", 24)
+    .style("cursor","pointer");
+
+/* Visible line */
+modelGroups.append("path").attr("class","line")
+    .attr("d", m => lineGen([m.reportRank, m.factualityRank, m.processRank]))
+    .attr("fill","none")
+    .attr("stroke", m => COLORS[m.group])
+    .attr("stroke-width", m => STROKE_W[m.group])
+    .attr("stroke-opacity", m => m.group === "other" ? 0.45 : 0.85)
+    .attr("stroke-linecap","round")
+    .style("pointer-events","none");
+
+/* Dots */
+modelGroups.each(function(m) {
+    const el = d3.select(this);
+    [m.reportRank, m.factualityRank, m.processRank].forEach((rank, i) => {
+        el.append("circle").attr("class","dot")
+            .attr("cx", xScale(i)).attr("cy", yScale(rank))
+            .attr("r", DOT_R[m.group])
+            .attr("fill", COLORS[m.group])
+            .attr("stroke","white").attr("stroke-width", 1)
+            .style("pointer-events","none");
+    });
+});
+
+/* Left labels (at Report rank) */
+modelGroups.append("text").attr("class","lbl-l")
+    .attr("x", -10).attr("y", m => yScale(m.reportRank))
+    .attr("text-anchor","end").attr("dominant-baseline","central")
+    .attr("fill", m => COLORS[m.group])
+    .style("font-size", m => LBL_SIZE[m.group])
+    .style("font-weight", m => LBL_W[m.group])
+    .style("font-family","'Times New Roman',serif")
+    .style("pointer-events","none")
+    .text(m => m.short);
+
+/* Right labels (at Process rank) */
+modelGroups.append("text").attr("class","lbl-r")
+    .attr("x", iW + 10).attr("y", m => yScale(m.processRank))
+    .attr("text-anchor","start").attr("dominant-baseline","central")
+    .attr("fill", m => COLORS[m.group])
+    .style("font-size", m => LBL_SIZE[m.group])
+    .style("font-weight", m => LBL_W[m.group])
+    .style("font-family","'Times New Roman',serif")
+    .style("pointer-events","none")
+    .text(m => m.short);
+
+/* ── Score annotations at each dot (on hover only) ── */
+
+/* ── Tooltip ── */
+const tooltip = document.getElementById("tooltip");
+
+function showTip(ev, m) {
+    const repToFact = m.factualityRank - m.reportRank;
+    const repToProc = m.processRank - m.reportRank;
+    const maxShift = Math.max(Math.abs(repToFact), Math.abs(repToProc), Math.abs(m.factualityRank - m.processRank));
+
+    let shiftHtml = "";
+    if (repToFact !== 0) {
+        const cls = repToFact > 0 ? "shift-down" : "shift-up";
+        const arrow = repToFact > 0 ? "\u2193" : "\u2191";
+        shiftHtml += `<span class="${cls}">${arrow}${Math.abs(repToFact)}</span> Report \u2192 Factuality`;
+    }
+    if (repToProc !== 0) {
+        if (shiftHtml) shiftHtml += "<br>";
+        const cls = repToProc > 0 ? "shift-down" : "shift-up";
+        const arrow = repToProc > 0 ? "\u2193" : "\u2191";
+        shiftHtml += `<span class="${cls}">${arrow}${Math.abs(repToProc)}</span> Report \u2192 Process`;
+    }
+    if (!shiftHtml) shiftHtml = "No rank shift";
+
+    tooltip.innerHTML = `
+        <div class="tt-name" style="color:${COLORS[m.group]}">${m.name}</div>
+        <div class="tt-row">
+            <span class="tt-label">Report</span>
+            <span class="tt-value">${m.report}</span>
+            <span class="tt-rank">#${m.reportRank}</span>
+        </div>
+        <div class="tt-row">
+            <span class="tt-label">Factuality</span>
+            <span class="tt-value">${m.factuality}</span>
+            <span class="tt-rank">#${m.factualityRank}</span>
+        </div>
+        <div class="tt-row">
+            <span class="tt-label">Process</span>
+            <span class="tt-value">${m.process}</span>
+            <span class="tt-rank">#${m.processRank}</span>
+        </div>
+        <div class="tt-shift">${shiftHtml}</div>`;
+
+    const tw = 270, th = 220;
+    let left = ev.clientX + 16, top = ev.clientY - 20;
+    if (left + tw > window.innerWidth - 10) left = ev.clientX - tw - 16;
+    if (top + th > window.innerHeight - 10) top = window.innerHeight - th - 10;
+    if (top < 10) top = 10;
+    tooltip.style.left = left + "px";
+    tooltip.style.top  = top  + "px";
+    tooltip.classList.add("visible");
+}
+
+function hideTip() { tooltip.classList.remove("visible"); }
+
+/* ── Hover interactions ── */
+modelGroups.select(".hit")
+    .on("mouseenter", function(ev, m) {
+        modelGroups.style("opacity", 0.08);
+        const parent = d3.select(this.parentNode);
+        parent.raise().style("opacity", 1);
+        parent.select(".line")
+            .attr("stroke-width", STROKE_W[m.group] + 2)
+            .attr("stroke-opacity", 1)
+            .attr("filter","url(#glow)");
+        parent.selectAll(".dot").attr("r", DOT_R[m.group] + 2);
+        showTip(ev, m);
+    })
+    .on("mousemove", function(ev, m) { showTip(ev, m); })
+    .on("mouseleave", function(ev, m) {
+        modelGroups.style("opacity", 1);
+        const parent = d3.select(this.parentNode);
+        parent.select(".line")
+            .attr("stroke-width", STROKE_W[m.group])
+            .attr("stroke-opacity", m.group === "other" ? 0.45 : 0.85)
+            .attr("filter", null);
+        parent.selectAll(".dot").attr("r", DOT_R[m.group]);
+        hideTip();
+    });
+
+/* ── Legend ── */
+const legData = [
+    {label:"MiroThinker", color:COLORS.miro, r:5},
+    {label:"OpenAI", color:COLORS.openai, r:4.5},
+    {label:"Kimi-K2.5", color:COLORS.kimi, r:5},
+    {label:"Manus", color:COLORS.manus, r:5},
+    {label:"Others", color:COLORS.other, r:3.5},
+];
+const legG = svg.append("g").attr("transform", `translate(${W/2}, ${H - 8})`);
+let lx = -220;
+legData.forEach(d => {
+    legG.append("circle").attr("cx", lx).attr("cy", 0).attr("r", d.r).attr("fill", d.color);
+    legG.append("text").attr("x", lx + d.r + 4).attr("y", 0)
+        .attr("dominant-baseline","central").attr("fill","#666")
+        .style("font-size","11px").style("font-family","'Times New Roman',serif")
+        .text(d.label);
+    lx += d.label.length * 7 + 30;
+});
+</script>
+</body>
+</html>

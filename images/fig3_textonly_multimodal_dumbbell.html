@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Text-Only vs. Multimodal Performance</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    display: flex; justify-content: center; align-items: flex-start;
+    background: white;
+    font-family: 'Times New Roman', Times, serif;
+    margin: 0; padding: 0;
+}
+#chart { width: 100%; height: auto; display: block; }
+
+.row { transition: opacity 0.15s ease; }
+.ylbl { transition: opacity 0.15s ease; }
+
+.tooltip {
+    position: fixed; pointer-events: none;
+    background: white; border: 1px solid #e0e0e0;
+    border-radius: 8px; padding: 14px 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 13px; color: #333;
+    opacity: 0; transition: opacity 0.15s ease;
+    z-index: 100;
+}
+.tooltip.visible { opacity: 1; }
+.tooltip .tt-name {
+    font-size: 15px; font-weight: bold;
+    margin-bottom: 8px; padding-bottom: 6px;
+    border-bottom: 1px solid #eee;
+}
+.tooltip .tt-row {
+    display: flex; align-items: center; margin-bottom: 4px;
+}
+.tooltip .tt-dot {
+    display: inline-block; width: 8px; height: 8px;
+    border-radius: 50%; margin-right: 6px;
+    flex-shrink: 0;
+}
+.tooltip .tt-lbl { color: #888; min-width: 90px; }
+.tooltip .tt-val { font-weight: bold; min-width: 40px; }
+.tooltip .tt-sep { margin: 6px 0; border-top: 1px solid #f0f0f0; }
+.tooltip .drop-pos { color: #4CAF50; font-weight: bold; }
+.tooltip .drop-neg { color: #E8696A; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<svg id="chart"></svg>
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+/* ── Data (from main_result.json — models with both text-only & multimodal) ── */
+const data = [
+    {name:"MiroThinker-H1",       short:"MT-H1",   textOnly:77.5, multi:74.5, group:"miro"},
+    {name:"OpenAI Deep Research",  short:"OpenAI",  textOnly:76.7, multi:70.2, group:"openai"},
+    {name:"MiroThinker-1.7",      short:"MT-1.7",  textOnly:75.5, multi:71.6, group:"miro"},
+    {name:"Gemini-3.1-Pro",       short:"Gemini",  textOnly:69.9, multi:68.1, group:"other"},
+    {name:"Claude-Opus-4.6",      short:"Claude",  textOnly:67.7, multi:66.4, group:"other"},
+    {name:"MiniMax-M2.5",         short:"MiniMax", textOnly:67.4, multi:63.3, group:"other"},
+    {name:"ChatGLM Agent",         short:"ChatGLM", textOnly:65.8, multi:63.6, group:"other"},
+    {name:"Qwen-3.5-Plus",        short:"Qwen",    textOnly:64.7, multi:56.1, group:"other"},
+    {name:"Manus",                  short:"Manus",   textOnly:64.0, multi:62.0, group:"other"},
+    {name:"Grok",                   short:"Grok",    textOnly:60.2, multi:60.5, group:"other"},
+];
+
+/* Pre-sorted by textOnly descending */
+data.forEach(d => {
+    d.delta = +(d.multi - d.textOnly).toFixed(1);
+    d.isMiro = d.group === "miro";
+});
+
+/* ── Colors ── */
+const MIRO    = "#7AA383";
+const TXT_COL = "#5B9BD5";
+const MM_COL  = "#ED7D31";
+
+/* ── Layout ── */
+const W = 900, H = 500;
+const labelW = 175, chartW = 550, deltaW = 80;
+const chartTop = 80, chartH = 370;
+const DOT_R = 6;
+
+const svg = d3.select("#chart")
+    .attr("viewBox", `0 0 ${W} ${H}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
+
+/* Title */
+svg.append("text")
+    .attr("x", W / 2).attr("y", 28)
+    .attr("text-anchor","middle").attr("fill","#1a1a2e")
+    .style("font-size","19px").style("font-weight","bold")
+    .style("font-family","'Times New Roman',serif")
+    .text("Text-Only vs. Multimodal: Overall Score Comparison");
+
+/* Subtitle */
+svg.append("text")
+    .attr("x", W / 2).attr("y", 50)
+    .attr("text-anchor","middle").attr("fill","#999")
+    .style("font-size","12px").style("font-style","italic")
+    .style("font-family","'Times New Roman',serif")
+    .text("Sorted by Text-Only overall score (descending)");
+
+/* Chart group */
+const cG = svg.append("g").attr("transform", `translate(${labelW},${chartTop})`);
+
+/* Scales */
+const allV = data.flatMap(d => [d.textOnly, d.multi]);
+const xSc = d3.scaleLinear()
+    .domain([d3.min(allV) - 2, d3.max(allV) + 2])
+    .range([0, chartW]).nice();
+
+const ySc = d3.scalePoint()
+    .domain(data.map(d => d.name))
+    .range([0, chartH]).padding(0.5);
+
+/* X grid */
+cG.selectAll(".xg").data(xSc.ticks()).enter()
+    .append("line").attr("class","xg")
+    .attr("x1", d => xSc(d)).attr("x2", d => xSc(d))
+    .attr("y1", 0).attr("y2", chartH)
+    .attr("stroke","#ececec").attr("stroke-width", 0.4);
+
+/* X axis */
+const xAx = cG.append("g").attr("transform",`translate(0,${chartH})`)
+    .call(d3.axisBottom(xSc).ticks(8));
+xAx.select(".domain").remove();
+xAx.selectAll("line").attr("stroke","#ddd");
+xAx.selectAll("text").attr("fill","#aaa").style("font-size","10px")
+    .style("font-family","'Times New Roman',serif");
+
+/* X label */
+cG.append("text")
+    .attr("x", chartW / 2).attr("y", chartH + 36)
+    .attr("text-anchor","middle").attr("fill","#555")
+    .style("font-size","13px").style("font-family","'Times New Roman',serif")
+    .text("Overall Score");
+
+/* ── Column header: Δ ── */
+svg.append("text")
+    .attr("x", labelW + chartW + 45).attr("y", chartTop - 12)
+    .attr("text-anchor","middle").attr("fill","#888")
+    .style("font-size","11px").style("font-weight","bold")
+    .style("font-family","'Times New Roman',serif")
+    .text("\u0394 Drop");
+
+/* ── Dumbbell rows ── */
+const rows = cG.selectAll(".row").data(data).enter()
+    .append("g").attr("class","row")
+    .attr("transform", d => `translate(0,${ySc(d.name)})`);
+
+/* Invisible hit area */
+rows.append("rect").attr("class","hit")
+    .attr("x", -labelW).attr("y", -18)
+    .attr("width", labelW + chartW + deltaW).attr("height", 36)
+    .attr("fill","transparent").style("cursor","pointer");
+
+/* Connecting line */
+rows.append("line").attr("class","dline")
+    .attr("x1", d => xSc(Math.min(d.textOnly, d.multi)))
+    .attr("x2", d => xSc(Math.max(d.textOnly, d.multi)))
+    .attr("y1", 0).attr("y2", 0)
+    .attr("stroke", d => d.isMiro ? MIRO : "#D0D0D0")
+    .attr("stroke-width", d => d.isMiro ? 2.5 : 1.5)
+    .attr("stroke-linecap","round");
+
+/* Text-Only dot (blue) */
+rows.append("circle").attr("class","txt-dot")
+    .attr("cx", d => xSc(d.textOnly)).attr("cy", 0).attr("r", DOT_R)
+    .attr("fill", TXT_COL).attr("stroke","white").attr("stroke-width", 0.8);
+
+/* Multimodal dot (orange) */
+rows.append("circle").attr("class","mm-dot")
+    .attr("cx", d => xSc(d.multi)).attr("cy", 0).attr("r", DOT_R)
+    .attr("fill", MM_COL).attr("stroke","white").attr("stroke-width", 0.8);
+
+/* Delta annotation */
+rows.append("text").attr("class","delta-txt")
+    .attr("x", chartW + 45).attr("y", 0)
+    .attr("text-anchor","middle").attr("dominant-baseline","central")
+    .attr("fill", d => d.delta > 0 ? "#4CAF50" : d.delta < -5 ? "#D9534F" : "#888")
+    .style("font-size","11px").style("font-weight","bold")
+    .style("font-family","'Times New Roman',serif")
+    .text(d => {
+        if (d.delta > 0) return `+${d.delta.toFixed(1)}`;
+        return d.delta.toFixed(1);
+    });
+
+/* ── Y labels ── */
+const lG = svg.append("g").attr("transform", `translate(${labelW - 10},${chartTop})`);
+const labels = lG.selectAll(".ylbl").data(data).enter()
+    .append("text").attr("class","ylbl")
+    .attr("x", 0).attr("y", d => ySc(d.name))
+    .attr("text-anchor","end").attr("dominant-baseline","central")
+    .attr("fill", d => d.isMiro ? MIRO : "#555")
+    .style("font-size","12px")
+    .style("font-weight", d => d.isMiro ? "bold" : "normal")
+    .style("font-family","'Times New Roman',serif")
+    .style("pointer-events","none")
+    .text(d => d.short);
+
+/* ── Legend ── */
+const legG = svg.append("g").attr("transform", `translate(${W/2},${chartTop + chartH + 55})`);
+legG.append("circle").attr("cx", -100).attr("cy", 0).attr("r", 5).attr("fill", TXT_COL);
+legG.append("text").attr("x", -90).attr("y", 0)
+    .attr("dominant-baseline","central").attr("fill","#555")
+    .style("font-size","12px").style("font-family","'Times New Roman',serif")
+    .text("Text-Only");
+legG.append("circle").attr("cx", 10).attr("cy", 0).attr("r", 5).attr("fill", MM_COL);
+legG.append("text").attr("x", 20).attr("y", 0)
+    .attr("dominant-baseline","central").attr("fill","#555")
+    .style("font-size","12px").style("font-family","'Times New Roman',serif")
+    .text("Multimodal");
+
+/* ── Tooltip ── */
+const tooltip = document.getElementById("tooltip");
+
+function posTip(ev) {
+    const tw = 250, th = 160;
+    let l = ev.clientX + 16, t = ev.clientY - 20;
+    if (l + tw > window.innerWidth - 10) l = ev.clientX - tw - 16;
+    if (t + th > window.innerHeight - 10) t = window.innerHeight - th - 10;
+    if (t < 10) t = 10;
+    tooltip.style.left = l + "px";
+    tooltip.style.top  = t + "px";
+}
+
+function showTip(ev, d) {
+    const nc = d.isMiro ? MIRO : "#555";
+    const dropCls = d.delta > 0 ? "drop-pos" : "drop-neg";
+    const dropSign = d.delta > 0 ? "+" : "";
+    tooltip.style.width = "250px";
+    tooltip.innerHTML = `
+        <div class="tt-name" style="color:${nc}">${d.name}</div>
+        <div class="tt-row">
+            <span class="tt-dot" style="background:${TXT_COL}"></span>
+            <span class="tt-lbl">Text-Only</span>
+            <span class="tt-val">${d.textOnly.toFixed(1)}</span>
+        </div>
+        <div class="tt-row">
+            <span class="tt-dot" style="background:${MM_COL}"></span>
+            <span class="tt-lbl">Multimodal</span>
+            <span class="tt-val">${d.multi.toFixed(1)}</span>
+        </div>
+        <div class="tt-sep"></div>
+        <div class="tt-row">
+            <span class="tt-lbl" style="margin-left:14px">Change (\u0394)</span>
+            <span class="tt-val ${dropCls}">${dropSign}${d.delta.toFixed(1)}</span>
+        </div>`;
+    posTip(ev);
+    tooltip.classList.add("visible");
+}
+
+function hideTip() { tooltip.classList.remove("visible"); }
+
+/* ── Hover interactions ── */
+rows.select(".hit")
+    .on("mouseenter", function(ev, d) {
+        rows.style("opacity", p => p === d ? 1 : 0.15);
+        labels.style("opacity", p => p === d ? 1 : 0.15);
+
+        const me = d3.select(this.parentNode);
+        me.select(".txt-dot").attr("r", DOT_R * 1.4);
+        me.select(".mm-dot").attr("r", DOT_R * 1.4);
+        me.select(".dline").attr("stroke-width", d.isMiro ? 3.5 : 2.5);
+        showTip(ev, d);
+    })
+    .on("mousemove", function(ev) { posTip(ev); })
+    .on("mouseleave", function() {
+        rows.style("opacity", 1);
+        labels.style("opacity", 1);
+        rows.selectAll(".txt-dot, .mm-dot").attr("r", DOT_R);
+        rows.each(function(dd) {
+            d3.select(this).select(".dline")
+                .attr("stroke-width", dd.isMiro ? 2.5 : 1.5);
+        });
+        hideTip();
+    });
+</script>
+</body>
+</html>
