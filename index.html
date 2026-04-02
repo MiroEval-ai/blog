@@ -175,6 +175,7 @@
         <li class="toc-sub"><a href="#auto-generation">Automated Query Generation</a></li>
         <li class="toc-sub"><a href="#verification">Verification</a></li>
         <li><a href="#evaluation">Evaluation Pipeline</a></li>
+        <li><a href="#setup">Experiment Setup</a></li>
         <li><a href="#findings">Findings</a></li>
         <li class="toc-sub"><a href="#finding-rankings">Rankings Shift Across Dimensions</a></li>
         <li class="toc-sub"><a href="#finding-specificity">Specificity Is the Bottleneck</a></li>
@@ -284,6 +285,13 @@
     <p><strong>Process Representation</strong> &mdash; Raw process logs are decomposed into a structured sequence of atomic research steps (e.g., information acquisition, evidence inspection, intermediate synthesis, planning, revision, and error correction), recovering their local dependency structure and extracting key process findings.</p>
     <p><strong>Process Quality Evaluation</strong> &mdash; The intrinsic quality of the research process is evaluated along five complementary dimensions: <em>Search Breadth</em> (range of sources and perspectives explored), <em>Analytical Depth</em> (multi-step reasoning beyond surface retrieval), <em>Progressive Refinement</em> (iterative improvement as new evidence is gathered), <em>Critical Thinking</em> (evaluation of source reliability and conflicting evidence), and <em>Efficiency</em> (avoidance of redundancy and circular exploration).</p>
     <p><strong>Process&ndash;Report Alignment</strong> &mdash; We examine bidirectional alignment between process findings and report findings. <em>Process&rarr;Report (P&rarr;R)</em> checks whether major findings established during the process are adequately realized in the report; <em>Report&rarr;Process (R&rarr;P)</em> checks whether report conclusions can be traced back to sufficient support in the process; and <em>Contradiction Detection</em> evaluates whether the system identifies and resolves conflicting evidence rather than silently propagating inconsistencies.</p>
+
+    <hr class="divider">
+
+    <h2 id="setup">Experiment Setup</h2>
+    <p>We evaluate 13 mainstream commercial deep research systems: OpenAI Deep Research, Gemini-3.1-Pro Deep Research, Grok Deep Research, Claude-Opus-4.6 Research, Manus-1.6-Max Wide Research, Doubao Deep Research, ChatGLM Agent, Kimi-K2.5 Deep Research, Qwen-3.5-Plus Deep Research, and MiniMax-M2.5 Research, along with three MiroThinker variants &mdash; MiroThinker-1.7-mini, MiroThinker-1.7, and MiroThinker-H1. For Kimi-K2.5, Doubao, and MiroThinker-1.7-mini, we report text-only results only, as these systems do not currently support multimodal deep research.</p>
+    <p>All systems are accessed through their official online service frontends. For each system, we develop automated pipelines that interact with the service interface to submit queries (including multimodal attachments where applicable), select the deep research mode, and collect the resulting outputs upon completion. The collected outputs include both the final report and, where exposed by the system, the intermediate research process &mdash; search queries, retrieved sources, and reasoning steps. For systems that do not natively display structured process traces, we reconstruct available process information from any visible intermediate outputs provided during the research session. All data collection was conducted within a controlled time window in March 2026 to ensure temporal consistency across systems.</p>
+    <p>For automatic evaluation, we use <strong>GPT-5.1</strong> as the judge model for synthesis quality evaluation, <strong>GPT-5.2</strong> for process evaluation, and <strong>GPT-5-mini</strong> for factuality verification.</p>
 
     <hr class="divider">
 
